@@ -1,0 +1,42 @@
+AGENTS.md
+CLAUDE.md
+
+# Go build artifacts
+yummycli
+*.exe
+*.test
+*.out
+
+# Coverage
+coverage.out
+coverage/
+*.coverprofile
+
+# Local secrets and env
+.env
+.env.*
+!.env.example
+.secrets/
+
+# Local runtime config
+.yummycli/
+config.local.json
+credentials.local.json
+
+# Release artifacts
+dist/
+bin/
+artifacts/
+
+# Temp files
+.DS_Store
+tmp/
+.tmp/
+.cache/
+
+# Editor files
+.idea/
+.vscode/
+
+# docs
+docs/
