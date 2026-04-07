@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -122,5 +123,38 @@ func TestProviderCredentialStoreSaveAPIKeyRejectsBlankAPIKey(t *testing.T) {
 	err := store.SaveAPIKey("gemini", "   ")
 	if err == nil {
 		t.Fatal("SaveAPIKey returned nil error for blank api key")
+	}
+}
+
+func TestProviderCredentialStoreAPIKeyPreviewReturnsMaskedValue(t *testing.T) {
+	fake := newMemorySecretStore()
+	store := NewProviderCredentialStore(fake)
+
+	err := store.SaveAPIKey("gemini", "jkfe123456wer9")
+	if err != nil {
+		t.Fatalf("SaveAPIKey returned error: %v", err)
+	}
+
+	got, err := store.APIKeyPreview("gemini")
+	if err != nil {
+		t.Fatalf("APIKeyPreview returned error: %v", err)
+	}
+
+	want := "jkfe******wer9"
+	if got != want {
+		t.Fatalf("preview = %q, want %q", got, want)
+	}
+}
+
+func TestProviderCredentialStoreAPIKeyPreviewReturnsNotFoundWhenMissing(t *testing.T) {
+	fake := newMemorySecretStore()
+	store := NewProviderCredentialStore(fake)
+
+	_, err := store.APIKeyPreview("gemini")
+	if err == nil {
+		t.Fatal("APIKeyPreview returned nil error for missing api key")
+	}
+	if !errors.Is(err, ErrSecretNotFound) {
+		t.Fatalf("error = %v, want %v", err, ErrSecretNotFound)
 	}
 }

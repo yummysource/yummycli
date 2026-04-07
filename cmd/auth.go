@@ -25,8 +25,13 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 }
 
 type authStatusOptions struct {
-	Provider   string `json:"provider"`
-	Configured bool   `json:"configured"`
+	Provider string `json:"provider"`
+}
+
+type authStatusResult struct {
+	Provider      string `json:"provider"`
+	Configured    bool   `json:"configured"`
+	APIKeyPreview string `json:"apiKeyPreview,omitempty"`
 }
 
 type authInitOptions struct {
@@ -61,9 +66,17 @@ func runStatus(f *cmdutil.Factory, opts *authStatusOptions) error {
 		return err
 	}
 
-	result := authStatusOptions{
+	result := authStatusResult{
 		Provider:   opts.Provider,
 		Configured: configured,
+	}
+
+	if configured {
+		preview, err := f.CredentialStore.APIKeyPreview(opts.Provider)
+		if err != nil {
+			return err
+		}
+		result.APIKeyPreview = preview
 	}
 
 	return json.NewEncoder(f.IOStreams.Out).Encode(result)

@@ -72,6 +72,21 @@ func (s *ProviderCredentialStore) RemoveAPIKey(provider string) error {
 	return s.store.Delete(secretServiceName, accountName(normalizedProvider))
 }
 
+// APIKeyPreview returns a masked preview of the API key for the given provider.
+func (s *ProviderCredentialStore) APIKeyPreview(provider string) (string, error) {
+	normalizedProvider, err := normalizeProvider(provider)
+	if err != nil {
+		return "", err
+	}
+
+	value, err := s.store.Get(secretServiceName, accountName(normalizedProvider))
+	if err != nil {
+		return "", err
+	}
+
+	return maskAPIKey(value), nil
+}
+
 func normalizeProvider(provider string) (string, error) {
 	normalized := strings.TrimSpace(strings.ToLower(provider))
 	if normalized == "" {
@@ -86,4 +101,12 @@ func normalizeProvider(provider string) (string, error) {
 
 func accountName(provider string) string {
 	return "provider:" + provider + ":api_key"
+}
+
+func maskAPIKey(value string) string {
+	if len(value) < 8 {
+		return "******"
+	}
+
+	return value[:4] + "******" + value[len(value)-4:]
 }

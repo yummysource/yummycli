@@ -315,3 +315,36 @@ func TestAuthStatusUnsupportedProvider(t *testing.T) {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
+
+func TestAuthStatusReportsMaskedAPIKeyPreviewWhenConfigured(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+
+	err := secretStore.Set("yummycli", "provider:gemini:api_key", "jkfe123456wer9")
+	if err != nil {
+		t.Fatalf("Set returned error: %v", err)
+	}
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"status", "--provider", "gemini"})
+
+	err = cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := stdout.String()
+	want := "{\"provider\":\"gemini\",\"configured\":true,\"apiKeyPreview\":\"jkfe******wer9\"}\n"
+	if got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
