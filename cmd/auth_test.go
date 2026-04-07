@@ -259,3 +259,59 @@ func TestAuthRemoveRequiresProviderFlag(t *testing.T) {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
+
+func TestAuthInitUnsupportedProvider(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"init", "--provider", "qwen", "--api-key", "test-api-key"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("Execute returned nil error for the unsupported provider")
+	}
+
+	want := "unsupported provider: qwen"
+
+	if err.Error() != want {
+		t.Fatalf("error = %q , want %q", err.Error(), want)
+	}
+}
+
+func TestAuthStatusUnsupportedProvider(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"status", "--provider", "qwen"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error for unsupported provider")
+	}
+
+	want := "unsupported provider: qwen"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
