@@ -49,6 +49,9 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 	command.Flags().StringVar(&opts.Provider, "provider", "", "provider name")
+	if err := command.MarkFlagRequired("provider"); err != nil {
+		panic(err)
+	}
 	return command
 }
 
@@ -78,6 +81,13 @@ func newCmdAuthInit(f *cmdutil.Factory) *cobra.Command {
 
 	command.Flags().StringVar(&opts.Provider, "provider", "", "provider name")
 	command.Flags().StringVar(&opts.APIKey, "api-key", "", "api key")
+
+	if err := command.MarkFlagRequired("provider"); err != nil {
+		panic(err)
+	}
+	if err := command.MarkFlagRequired("api-key"); err != nil {
+		panic(err)
+	}
 
 	return command
 }
@@ -115,6 +125,9 @@ func newCmdAuthRemove(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	command.Flags().StringVar(&opts.Provider, "provider", "", "provider name")
+	if err := command.MarkFlagRequired("provider"); err != nil {
+		panic(err)
+	}
 
 	return command
 }

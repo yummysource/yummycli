@@ -148,3 +148,114 @@ func TestAuthRemoveDeletesGeminiAPIKey(t *testing.T) {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
 }
+
+func TestAuthStatusRequiresProviderFlag(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"status"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatalf("Execute returned nil error without --provider")
+	}
+
+	want := "required flag(s) \"provider\" not set"
+
+	if err.Error() != want {
+		t.Fatalf("error = %q , want %q", err.Error(), want)
+	}
+}
+
+func TestAuthInitRequiresProviderFlag(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"init", "--api-key", "test-api-key"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error without --provider")
+	}
+
+	want := "required flag(s) \"provider\" not set"
+	if err.Error() != want {
+		t.Fatalf("error = %q , want %q", err.Error(), want)
+	}
+}
+
+func TestAuthInitRequiresAPIKeyFlag(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"init", "--provider", "gemini"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error without --api-key")
+	}
+
+	want := "required flag(s) \"api-key\" not set"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestAuthRemoveRequiresProviderFlag(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"remove"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error without --provider")
+	}
+
+	want := "required flag(s) \"provider\" not set"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
