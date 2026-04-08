@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/yummysource/yummycli/internal/providers"
 )
 
 const secretServiceName = "yummycli"
@@ -32,7 +34,7 @@ func NewProviderCredentialStore(store SecretStore) *ProviderCredentialStore {
 
 // SaveAPIKey stores an API key for the given provider.
 func (s *ProviderCredentialStore) SaveAPIKey(provider, apiKey string) error {
-	normalizedProvider, err := normalizeProvider(provider)
+	normalizedProvider, err := providers.Normalize(provider)
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,7 @@ func (s *ProviderCredentialStore) SaveAPIKey(provider, apiKey string) error {
 
 // HasAPIKey reports whether an API key exists for the given provider.
 func (s *ProviderCredentialStore) HasAPIKey(provider string) (bool, error) {
-	normalizedProvider, err := normalizeProvider(provider)
+	normalizedProvider, err := providers.Normalize(provider)
 	if err != nil {
 		return false, err
 	}
@@ -64,7 +66,7 @@ func (s *ProviderCredentialStore) HasAPIKey(provider string) (bool, error) {
 
 // RemoveAPIKey deletes the API key for the given provider.
 func (s *ProviderCredentialStore) RemoveAPIKey(provider string) error {
-	normalizedProvider, err := normalizeProvider(provider)
+	normalizedProvider, err := providers.Normalize(provider)
 	if err != nil {
 		return err
 	}
@@ -74,7 +76,7 @@ func (s *ProviderCredentialStore) RemoveAPIKey(provider string) error {
 
 // APIKeyPreview returns a masked preview of the API key for the given provider.
 func (s *ProviderCredentialStore) APIKeyPreview(provider string) (string, error) {
-	normalizedProvider, err := normalizeProvider(provider)
+	normalizedProvider, err := providers.Normalize(provider)
 	if err != nil {
 		return "", err
 	}
@@ -85,18 +87,6 @@ func (s *ProviderCredentialStore) APIKeyPreview(provider string) (string, error)
 	}
 
 	return maskAPIKey(value), nil
-}
-
-func normalizeProvider(provider string) (string, error) {
-	normalized := strings.TrimSpace(strings.ToLower(provider))
-	if normalized == "" {
-		return "", fmt.Errorf("provider is required")
-	}
-	if normalized != "gemini" {
-		return "", fmt.Errorf("unsupported provider: %s", provider)
-	}
-
-	return normalized, nil
 }
 
 func accountName(provider string) string {
