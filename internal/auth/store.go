@@ -100,3 +100,13 @@ func maskAPIKey(value string) string {
 
 	return value[:4] + "******" + value[len(value)-4:]
 }
+
+// APIKey returns the stored API key for the given provider.
+func (s *ProviderCredentialStore) APIKey(provider string) (string, error) {
+	normalizedProvider, err := providers.Normalize(provider)
+	if err != nil {
+		return "", err
+	}
+
+	return s.store.Get(secretServiceName, accountName(normalizedProvider))
+}

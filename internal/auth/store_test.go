@@ -158,3 +158,21 @@ func TestProviderCredentialStoreAPIKeyPreviewReturnsNotFoundWhenMissing(t *testi
 		t.Fatalf("error = %v, want %v", err, ErrSecretNotFound)
 	}
 }
+
+func TestProviderCredentialStoreSaveAPIKeyNormalizesProviderName(t *testing.T) {
+	fake := newMemorySecretStore()
+	store := NewProviderCredentialStore(fake)
+
+	err := store.SaveAPIKey(" GEMINI ", "test-api-key")
+	if err != nil {
+		t.Fatalf("SaveAPIKey returned error: %v", err)
+	}
+
+	got, err := fake.Get("yummycli", "provider:gemini:api_key")
+	if err != nil {
+		t.Fatalf("Get returned error: %v", err)
+	}
+	if got != "test-api-key" {
+		t.Fatalf("stored api key = %q, want %q", got, "test-api-key")
+	}
+}

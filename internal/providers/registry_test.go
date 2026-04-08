@@ -47,3 +47,15 @@ func TestNormalizeRejectsUnsupportedProvider(t *testing.T) {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
+
+func TestNormalizeReturnsOriginalUnsupportedProviderNameInError(t *testing.T) {
+	_, err := Normalize("Qwen")
+	if err == nil {
+		t.Fatal("Normalize returned nil error for unsupported provider")
+	}
+
+	want := "unsupported provider: Qwen"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
