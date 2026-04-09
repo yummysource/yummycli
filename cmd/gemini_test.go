@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"time"
 
 	"github.com/yummysource/yummycli/internal/auth"
 	"github.com/yummysource/yummycli/internal/cmdutil"
@@ -125,33 +126,6 @@ func TestGeminiNanoBananaRequiresPromptFlag(t *testing.T) {
 	}
 
 	want := "required flag(s) \"prompt\" not set"
-	if err.Error() != want {
-		t.Fatalf("error = %q, want %q", err.Error(), want)
-	}
-}
-
-func TestGeminiNanoBananaRequiresOutputFlag(t *testing.T) {
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	secretStore := newMemorySecretStore()
-
-	f := &cmdutil.Factory{
-		IOStreams: &cmdutil.IOStreams{
-			Out:    stdout,
-			ErrOut: stderr,
-		},
-		CredentialStore: auth.NewProviderCredentialStore(secretStore),
-	}
-
-	cmd := NewCmdGemini(f)
-	cmd.SetArgs([]string{"nanobanana", "--prompt", "a banana on a plate"})
-
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("Execute returned nil error without --output")
-	}
-
-	want := "required flag(s) \"output\" not set"
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
@@ -280,5 +254,156 @@ func TestGeminiNanoBananaReturnsErrorWhenImageGeneratorIsNotConfigured(t *testin
 	want := "image generator is not configured"
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestGeminiNanoBananaRejectsUnsupportedAspectRatio(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	secretStore := newMemorySecretStore()
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a milk banana on a plate",
+		"--output", "result11.png",
+		"--aspect-ratio", "5:7",
+	})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error for unsupported aspect ratio")
+	}
+
+	want := "unsupported aspect ratio: 5:7"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestGeminiNanoBananaRejectsUnsupportedImageSize(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a banana on a plate",
+		"--output", "./result.png",
+		"--image-size", "3K",
+	})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error for unsupported image size")
+	}
+
+	want := "unsupported image size: 3K"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestGeminiNanoBananaPassesAspectRatioAndImageSizeToGenerator(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a banana on a plate",
+		"--output", "./result.png",
+		"--aspect-ratio", "21:9",
+		"--image-size", "4K",
+	})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	if !generator.called {
+		t.Fatal("GenerateImage was not called")
+	}
+
+	if generator.req.AspectRatio != "21:9" {
+		t.Fatalf("aspect ratio = %q, want %q", generator.req.AspectRatio, "21:9")
+	}
+	if generator.req.ImageSize != "4K" {
+		t.Fatalf("image size = %q, want %q", generator.req.ImageSize, "4K")
+	}
+}
+
+func TestGeminiNanoBananaUsesDefaultOutputFileNameWhenOutputIsOmitted(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	originalNowFunc := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2026, 4, 9, 15, 30, 45, 123000000, time.Local)
+	}
+	defer func() {
+		nowFunc = originalNowFunc
+	}()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a banana on a plate",
+	})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	if !generator.called {
+		t.Fatal("GenerateImage was not called")
+	}
+
+	want := "gemini_20260409153045_123.png"
+	if generator.req.Output != want {
+		t.Fatalf("output = %q, want %q", generator.req.Output, want)
 	}
 }

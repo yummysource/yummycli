@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -51,9 +52,11 @@ func newCmdGeminiInit(f *cmdutil.Factory) *cobra.Command {
 }
 
 type geminiNanoBananaOptions struct {
-	Prompt string
-	Output string
-	Model  string
+	Prompt      string
+	Output      string
+	Model       string
+	AspectRatio string
+	ImageSize   string
 }
 
 func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
@@ -75,28 +78,103 @@ func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
 	command.Flags().StringVar(&opts.Prompt, "prompt", "", "Image generation prompt")
 	command.Flags().StringVar(&opts.Output, "output", "", "Output image path")
 	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model")
+	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", "16:9", "Gemini image aspect-ratio")
+	command.Flags().StringVar(&opts.ImageSize, "image-size", "1K", "Gemini image size")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)
 	}
-	if err := command.MarkFlagRequired("output"); err != nil {
-		panic(err)
-	}
-
 	return command
 }
 
 func runGeminiNanoBanana(f *cmdutil.Factory, opts *geminiNanoBananaOptions) error {
+	errAspectRatio := validateAspectRatio(opts)
+	errImageSize := validateImageSize(opts)
+
+	if errAspectRatio != nil {
+		return errAspectRatio
+	}
+
+	if errImageSize != nil {
+		return errImageSize
+	}
+
 	if f.ImageGenerator == nil {
 		return fmt.Errorf("image generator is not configured")
 	}
 
+	if opts.Output == "" {
+		opts.Output = defaultImageOutputPath(providers.Gemini)
+	}
+
 	req := internalimage.GenerateImageRequest{
-		Provider: providers.Gemini,
-		Prompt:   opts.Prompt,
-		Output:   opts.Output,
-		Model:    opts.Model,
+		Provider:    providers.Gemini,
+		Prompt:      opts.Prompt,
+		Output:      opts.Output,
+		Model:       opts.Model,
+		AspectRatio: opts.AspectRatio,
+		ImageSize:   opts.ImageSize,
 	}
 
 	return f.ImageGenerator.GenerateImage(context.Background(), req)
+}
+
+func validateAspectRatio(opts *geminiNanoBananaOptions) error {
+	aspectRatioGemini31FlashImagePreview := []string{"1:1", "1:4", "1:8", "2:3", "3:2", "3:4", "4:1", "4:3", "4:5", "5:4", "8:1", "9:16", "16:9", "21:9"}
+
+	aspectRatioGemini3ProImagePreview := []string{"1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"}
+
+	var aspectRatio []string
+	switch opts.Model {
+	case "gemini-3.1-flash-image-preview":
+		aspectRatio = aspectRatioGemini31FlashImagePreview
+
+	case "gemini-3-pro-image-preview":
+		aspectRatio = aspectRatioGemini3ProImagePreview
+	default:
+		aspectRatio = []string{"1:1", "3:4", "4:3", "9:16", "16:9"}
+	}
+
+	isInAspectRatio := false
+	for _, item := range aspectRatio {
+		if item == opts.AspectRatio {
+			isInAspectRatio = true
+		}
+	}
+
+	if !isInAspectRatio {
+		// return errors.New("unsupported aspect-ratio")
+		return fmt.Errorf("unsupported aspect ratio: %s", opts.AspectRatio)
+	}
+	return nil
+}
+
+func validateImageSize(opts *geminiNanoBananaOptions) error {
+	resolution := []string{"1K", "2K", "4K"}
+
+	isInResolution := false
+	for _, item := range resolution {
+		if item == opts.ImageSize {
+			isInResolution = true
+		}
+	}
+
+	if !isInResolution {
+		// return errors.New("unsupported resolution")
+		return fmt.Errorf("unsupported image size: %s", opts.ImageSize)
+	}
+
+	return nil
+}
+
+var nowFunc = time.Now
+
+func defaultImageOutputPath(provider string, now ...time.Time) string {
+	var t time.Time
+	if len(now) > 0 {
+		t = now[0]
+	} else {
+		t = nowFunc()
+	}
+	return fmt.Sprintf("%s_%s_%03d.png", provider, t.Format("20060102150405"), t.Nanosecond()/1e6)
 }

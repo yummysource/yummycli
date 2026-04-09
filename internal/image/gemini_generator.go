@@ -29,7 +29,7 @@ func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 		return fmt.Errorf("unsupported provider: %s", req.Provider)
 	}
 
-	apiKey, err := g.credentialStore.APIKey(req.Provider)
+	apiKey, err := g.credentialStore.GetAPIKey(req.Provider)
 	if err != nil {
 		return err
 	}
@@ -43,6 +43,18 @@ func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 
 	config := &genai.GenerateContentConfig{
 		ResponseModalities: []string{"IMAGE", "TEXT"},
+	}
+
+	if req.AspectRatio != "" || req.ImageSize != "" {
+		config.ImageConfig = &genai.ImageConfig{}
+	}
+
+	if req.AspectRatio != "" {
+		config.ImageConfig.AspectRatio = req.AspectRatio
+	}
+
+	if req.ImageSize != "" {
+		config.ImageConfig.ImageSize = req.ImageSize
 	}
 
 	result, err := client.Models.GenerateContent(

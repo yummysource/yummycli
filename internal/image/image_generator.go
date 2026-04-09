@@ -4,10 +4,12 @@ import "context"
 
 // GenerateImageRequest describes a text-to-image generation request.
 type GenerateImageRequest struct {
-	Provider string
-	Prompt   string
-	Output   string
-	Model    string
+	Provider    string
+	Prompt      string
+	Output      string
+	Model       string
+	AspectRatio string
+	ImageSize   string
 }
 
 // ImageGenerator generates images from text prompts.
