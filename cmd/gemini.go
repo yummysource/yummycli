@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -153,6 +154,7 @@ func validateImageSize(opts *geminiNanoBananaOptions) error {
 	resolution := []string{"1K", "2K", "4K"}
 
 	isInResolution := false
+	opts.ImageSize = strings.ToUpper(opts.ImageSize)
 	for _, item := range resolution {
 		if item == opts.ImageSize {
 			isInResolution = true
