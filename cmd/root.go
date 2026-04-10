@@ -5,11 +5,9 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
+	"github.com/yummysource/yummycli/internal/build"
 	"github.com/yummysource/yummycli/internal/cmdutil"
 )
-
-// Version reports the build version shown by the version command.
-var Version = "dev"
 
 const rootLong = `yummycli - AI-friendly CLI for multimodal model providers.
 
@@ -88,7 +86,7 @@ func newVersionCommand(f *cmdutil.Factory) *cobra.Command {
 		Use:   "version",
 		Short: "Show the yummycli version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := fmt.Fprintln(f.IOStreams.Out, Version)
+			_, err := fmt.Fprintln(f.IOStreams.Out, build.Version)
 			return err
 		},
 	}
