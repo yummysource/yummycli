@@ -9,6 +9,7 @@ import (
 	"github.com/yummysource/yummycli/internal/auth"
 	"github.com/yummysource/yummycli/internal/cmdutil"
 	internalimage "github.com/yummysource/yummycli/internal/image"
+	"github.com/yummysource/yummycli/internal/output"
 	"github.com/yummysource/yummycli/internal/providers"
 )
 
@@ -23,6 +24,7 @@ func TestGeminiInitSavesAPIKeyWithGeminiProvider(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -58,6 +60,7 @@ func TestGeminiInitRequiresAPIKeyFlag(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -85,6 +88,7 @@ func TestGeminiInitStoresCredentialsUnderGeminiProviderKey(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -115,6 +119,7 @@ func TestGeminiNanoBananaRequiresPromptFlag(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -156,6 +161,7 @@ func TestGeminiNanoBananaUsesDefaultModelWhenGenerating(t *testing.T) {
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -201,6 +207,7 @@ func TestGeminiNanoBananaUsesExplicitModelWhenProvided(t *testing.T) {
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -237,6 +244,7 @@ func TestGeminiNanoBananaReturnsErrorWhenImageGeneratorIsNotConfigured(t *testin
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -268,6 +276,7 @@ func TestGeminiNanoBananaRejectsUnsupportedAspectRatio(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -302,6 +311,7 @@ func TestGeminiNanoBananaRejectsUnsupportedImageSize(t *testing.T) {
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -336,6 +346,7 @@ func TestGeminiNanoBananaPassesAspectRatioAndImageSizeToGenerator(t *testing.T) 
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -385,6 +396,7 @@ func TestGeminiNanoBananaUsesDefaultOutputFileNameWhenOutputIsOmitted(t *testing
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -421,6 +433,7 @@ func TestGeminiNanoBananaPassesInputImageToGenerator(t *testing.T) {
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -457,6 +470,7 @@ func TestGeminiNanoBananaPassesMultipleInputImagesToGenerator(t *testing.T) {
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -508,6 +522,7 @@ func TestGeminiNanoBananaWritesJSONResultOnSuccess(t *testing.T) {
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)
@@ -551,6 +566,7 @@ func TestGeminiNanoBananaWritesZeroInputImageCountForTextOnlyGeneration(t *testi
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
 		ImageGenerator:  generator,
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdGemini(f)

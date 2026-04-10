@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -112,6 +112,9 @@ func runGeminiNanoBanana(f *cmdutil.Factory, opts *geminiNanoBananaOptions) erro
 	if f.ImageGenerator == nil {
 		return fmt.Errorf("image generator is not configured")
 	}
+	if f.Output == nil {
+		return fmt.Errorf("output writer is not configured")
+	}
 
 	if opts.Output == "" {
 		opts.Output = defaultImageOutputPath(providers.Gemini)
@@ -138,7 +141,7 @@ func runGeminiNanoBanana(f *cmdutil.Factory, opts *geminiNanoBananaOptions) erro
 		InputImageCount: len(opts.InputImages),
 	}
 
-	return json.NewEncoder(f.IOStreams.Out).Encode(result)
+	return f.Output.JSON(result)
 }
 
 func validateAspectRatio(opts *geminiNanoBananaOptions) error {
@@ -186,6 +189,7 @@ func validateImageSize(opts *geminiNanoBananaOptions) error {
 		resolution = []string{"1K", "2K", "4K"}
 	}
 
+	opts.ImageSize = strings.ToUpper(opts.ImageSize)
 	isInResolution := false
 	for _, item := range resolution {
 		if item == opts.ImageSize {

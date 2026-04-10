@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -25,7 +25,7 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 }
 
 type authStatusOptions struct {
-	Provider string `json:"provider"`
+	Provider string
 }
 
 type authStatusResult struct {
@@ -61,6 +61,9 @@ func newCmdAuthStatus(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runStatus(f *cmdutil.Factory, opts *authStatusOptions) error {
+	if f.Output == nil {
+		return fmt.Errorf("output writer is not configured")
+	}
 	configured, err := f.CredentialStore.HasAPIKey(opts.Provider)
 	if err != nil {
 		return err
@@ -79,14 +82,14 @@ func runStatus(f *cmdutil.Factory, opts *authStatusOptions) error {
 		result.APIKeyPreview = preview
 	}
 
-	return json.NewEncoder(f.IOStreams.Out).Encode(result)
+	return f.Output.JSON(result)
 }
 
 func newCmdAuthInit(f *cmdutil.Factory) *cobra.Command {
 	opts := &authInitOptions{}
 	command := &cobra.Command{
 		Use:   "init",
-		Short: "Initilize the provider credentials",
+		Short: "Initialize the provider credentials",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAuthInit(f, opts)
 		},
@@ -106,6 +109,9 @@ func newCmdAuthInit(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runAuthInit(f *cmdutil.Factory, opts *authInitOptions) error {
+	if f.Output == nil {
+		return fmt.Errorf("output writer is not configured")
+	}
 	err := f.CredentialStore.SaveAPIKey(opts.Provider, opts.APIKey)
 	if err != nil {
 		return err
@@ -115,7 +121,7 @@ func runAuthInit(f *cmdutil.Factory, opts *authInitOptions) error {
 		Provider:   opts.Provider,
 		Configured: true,
 	}
-	return json.NewEncoder(f.IOStreams.Out).Encode(result)
+	return f.Output.JSON(result)
 }
 
 type authRemoveOptions struct {
@@ -131,7 +137,7 @@ func newCmdAuthRemove(f *cmdutil.Factory) *cobra.Command {
 	opts := &authRemoveOptions{}
 	command := &cobra.Command{
 		Use:   "remove",
-		Short: "",
+		Short: "Remove stored provider credentials",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAuthRemove(f, opts)
 		},
@@ -146,6 +152,9 @@ func newCmdAuthRemove(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runAuthRemove(f *cmdutil.Factory, opts *authRemoveOptions) error {
+	if f.Output == nil {
+		return fmt.Errorf("output writer is not configured")
+	}
 	err := f.CredentialStore.RemoveAPIKey(opts.Provider)
 	if err != nil {
 		return err
@@ -155,5 +164,5 @@ func runAuthRemove(f *cmdutil.Factory, opts *authRemoveOptions) error {
 		Removed:  true,
 	}
 
-	return json.NewEncoder(f.IOStreams.Out).Encode(result)
+	return f.Output.JSON(result)
 }

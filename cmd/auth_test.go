@@ -6,6 +6,7 @@ import (
 
 	"github.com/yummysource/yummycli/internal/auth"
 	"github.com/yummysource/yummycli/internal/cmdutil"
+	"github.com/yummysource/yummycli/internal/output"
 )
 
 type memorySecretStore struct {
@@ -54,6 +55,7 @@ func TestAuthStatusReportsGeminiAsNotConfigured(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -84,6 +86,7 @@ func TestAuthInitSavesGeminiAPIKey(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(fakeSecrets),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -125,6 +128,7 @@ func TestAuthRemoveDeletesGeminiAPIKey(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -161,6 +165,7 @@ func TestAuthStatusRequiresProviderFlag(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -190,6 +195,7 @@ func TestAuthInitRequiresProviderFlag(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -217,6 +223,7 @@ func TestAuthInitRequiresAPIKeyFlag(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -244,6 +251,7 @@ func TestAuthRemoveRequiresProviderFlag(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -272,6 +280,7 @@ func TestAuthInitUnsupportedProvider(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -300,6 +309,7 @@ func TestAuthStatusUnsupportedProvider(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
@@ -332,6 +342,7 @@ func TestAuthStatusReportsMaskedAPIKeyPreviewWhenConfigured(t *testing.T) {
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
 	}
 
 	cmd := NewCmdAuth(f)
