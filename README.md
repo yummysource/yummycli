@@ -32,7 +32,11 @@ Supports image generation and editing via [Gemini](https://deepmind.google/techn
 ### From npm (recommended)
 
 ```bash
+# Install CLI
 npm install -g @yummysource/yummycli
+
+# Install Agent Skills (required for AI Agent usage)
+npx skills add yummysource/yummycli -y -g
 ```
 
 Verify the install:
@@ -47,6 +51,9 @@ yummycli version
 git clone https://github.com/yummysource/yummycli.git
 cd yummycli
 make install
+
+# Install Agent Skills (required for AI Agent usage)
+npx skills add yummysource/yummycli -y -g
 ```
 
 ---
@@ -262,6 +269,12 @@ yummycli ships with Skills — structured instruction files that teach AI Agents
 | [`generate-image`](./skills/generate-image/SKILL.md) | Text-to-image generation, single-image editing, and multi-image reference editing via Gemini |
 
 Skills are located in [`./skills/`](./skills/).
+
+### Installation
+
+```bash
+npx skills add yummysource/yummycli -y -g
+```
 
 Load `yummy-shared` before any other yummycli skill.
 
