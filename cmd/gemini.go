@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -151,10 +150,21 @@ func validateAspectRatio(opts *geminiNanoBananaOptions) error {
 }
 
 func validateImageSize(opts *geminiNanoBananaOptions) error {
-	resolution := []string{"1K", "2K", "4K"}
+	resolutionGemini31FlashImagePreview := []string{"512", "0.5K", "1K", "2K", "4K"}
+	resolutionGemini3ProImagePreview := []string{"1K", "2K", "4K"}
+
+	var resolution []string
+	switch opts.Model {
+	case "gemini-3.1-flash-image-preview":
+		resolution = resolutionGemini31FlashImagePreview
+
+	case "gemini-3-pro-image-preview":
+		resolution = resolutionGemini3ProImagePreview
+	default:
+		resolution = []string{"1K", "2K", "4K"}
+	}
 
 	isInResolution := false
-	opts.ImageSize = strings.ToUpper(opts.ImageSize)
 	for _, item := range resolution {
 		if item == opts.ImageSize {
 			isInResolution = true
@@ -162,10 +172,9 @@ func validateImageSize(opts *geminiNanoBananaOptions) error {
 	}
 
 	if !isInResolution {
-		// return errors.New("unsupported resolution")
+		// return errors.New("unsupported aspect-ratio")
 		return fmt.Errorf("unsupported image size: %s", opts.ImageSize)
 	}
-
 	return nil
 }
 
