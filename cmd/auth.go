@@ -15,10 +15,9 @@ func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 		"Provider and credential management",
 		nil,
 		newCmdAuthInit(f),
-		newSimpleCommand("list", "List configured provider credentials", nil),
+		newCmdAuthList(f),
 		newCmdAuthStatus(f),
 		newCmdAuthRemove(f),
-		newSimpleCommand("clear", "Clear all provider credentials", nil),
 	)
 
 	return command
@@ -122,6 +121,45 @@ func runAuthInit(f *cmdutil.Factory, opts *authInitOptions) error {
 		Configured: true,
 	}
 	return f.Output.JSON(result)
+}
+
+// authListResult is a single entry in the auth list JSON output.
+type authListResult struct {
+	Provider      string `json:"provider"`
+	Configured    bool   `json:"configured"`
+	APIKeyPreview string `json:"apiKeyPreview,omitempty"`
+}
+
+func newCmdAuthList(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List all providers and their credential status",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAuthList(f)
+		},
+	}
+}
+
+func runAuthList(f *cmdutil.Factory) error {
+	if f.Output == nil {
+		return fmt.Errorf("output writer is not configured")
+	}
+
+	statuses, err := f.CredentialStore.ListConfigured()
+	if err != nil {
+		return err
+	}
+
+	results := make([]authListResult, 0, len(statuses))
+	for _, s := range statuses {
+		results = append(results, authListResult{
+			Provider:      s.Provider,
+			Configured:    s.Configured,
+			APIKeyPreview: s.APIKeyPreview,
+		})
+	}
+
+	return f.Output.JSON(results)
 }
 
 type authRemoveOptions struct {

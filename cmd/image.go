@@ -41,12 +41,6 @@ func NewCmdImage(f *cmdutil.Factory) *cobra.Command {
 
 	command.AddCommand(
 		newCmdImageGenerate(f),
-		newSimpleCommand("edit", "Edit an existing image", map[string]string{
-			"capability": "image.edit",
-		}),
-		newSimpleCommand("models", "List available image models", map[string]string{
-			"capability": "image.models",
-		}),
 	)
 
 	return command

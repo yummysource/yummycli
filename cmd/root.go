@@ -50,8 +50,6 @@ func NewRootCommand(f *cmdutil.Factory) *cobra.Command {
 		NewCmdGemini(f),
 		NewCmdImage(f),
 		NewCmdAuth(f),
-		NewCmdConfig(f),
-		newSimpleCommand("doctor", "Environment diagnostics", nil),
 	)
 
 	return root
@@ -68,19 +66,6 @@ func newGroupCommand(use, short string, annotations map[string]string, subcomman
 	return command
 }
 
-func newSimpleCommand(use, short string, annotations map[string]string) *cobra.Command {
-	command := &cobra.Command{
-		Use:         use,
-		Short:       short,
-		Annotations: annotations,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return fmt.Errorf("%s is not implemented yet", commandPath(cmd))
-		},
-	}
-
-	return command
-}
-
 func newVersionCommand(f *cmdutil.Factory) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "version",
@@ -92,14 +77,6 @@ func newVersionCommand(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	return command
-}
-
-func commandPath(cmd *cobra.Command) string {
-	path := cmd.CommandPath()
-	if path != "" {
-		return path
-	}
-	return cmd.Name()
 }
 
 func assertSubcommands(t interface {

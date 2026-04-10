@@ -101,6 +101,43 @@ func maskAPIKey(value string) string {
 	return value[:4] + "******" + value[len(value)-4:]
 }
 
+// ProviderStatus holds the credential status for a single provider.
+type ProviderStatus struct {
+	Provider      string
+	Configured    bool
+	APIKeyPreview string // non-empty only when Configured is true
+}
+
+// ListConfigured returns the credential status for every registered provider.
+func (s *ProviderCredentialStore) ListConfigured() ([]ProviderStatus, error) {
+	all := providers.All()
+	result := make([]ProviderStatus, 0, len(all))
+
+	for _, provider := range all {
+		configured, err := s.HasAPIKey(provider)
+		if err != nil {
+			return nil, err
+		}
+
+		status := ProviderStatus{
+			Provider:   provider,
+			Configured: configured,
+		}
+
+		if configured {
+			preview, err := s.APIKeyPreview(provider)
+			if err != nil {
+				return nil, err
+			}
+			status.APIKeyPreview = preview
+		}
+
+		result = append(result, status)
+	}
+
+	return result, nil
+}
+
 // GetAPIKey returns the stored API key for the given provider.
 func (s *ProviderCredentialStore) GetAPIKey(provider string) (string, error) {
 	normalizedProvider, err := providers.Normalize(provider)

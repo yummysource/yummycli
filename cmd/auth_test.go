@@ -359,3 +359,60 @@ func TestAuthStatusReportsMaskedAPIKeyPreviewWhenConfigured(t *testing.T) {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
 }
+
+func TestAuthListReturnsAllProvidersWhenNoneConfigured(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	f := &cmdutil.Factory{
+		IOStreams:        &cmdutil.IOStreams{Out: stdout, ErrOut: stderr},
+		CredentialStore: auth.NewProviderCredentialStore(newMemorySecretStore()),
+		Output:          output.New(stdout),
+	}
+
+	cmd := NewCmdAuth(f)
+	cmd.SetArgs([]string{"list"})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := stdout.String()
+	want := "[{\"provider\":\"gemini\",\"configured\":false}]\n"
+	if got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestAuthListShowsConfiguredProviderWithKeyPreview(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+
+	f := &cmdutil.Factory{
+		IOStreams:        &cmdutil.IOStreams{Out: stdout, ErrOut: stderr},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		Output:          output.New(stdout),
+	}
+
+	// Pre-configure Gemini.
+	initCmd := NewCmdAuth(f)
+	initCmd.SetArgs([]string{"init", "--provider", "gemini", "--api-key", "AIza1234567890abcd"})
+	if err := initCmd.Execute(); err != nil {
+		t.Fatalf("auth init returned error: %v", err)
+	}
+	stdout.Reset()
+
+	listCmd := NewCmdAuth(f)
+	listCmd.SetArgs([]string{"list"})
+	if err := listCmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := stdout.String()
+	want := "[{\"provider\":\"gemini\",\"configured\":true,\"apiKeyPreview\":\"AIza******abcd\"}]\n"
+	if got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}

@@ -11,7 +11,7 @@ func TestRootCommandIncludesCoreGroups(t *testing.T) {
 
 	root := NewRootCommand(f)
 
-	expected := []string{"auth", "config", "doctor", "gemini", "image", "version"}
+	expected := []string{"auth", "gemini", "image", "version"}
 
 	assertSubcommands(t, root, expected)
 }
@@ -55,7 +55,7 @@ func TestImageCommandIncludesPhaseOneActions(t *testing.T) {
 		t.Fatalf("find image command: %v", err)
 	}
 
-	expected := []string{"generate", "edit", "models"}
+	expected := []string{"generate"}
 
 	assertSubcommands(t, image, expected)
 }
@@ -69,19 +69,6 @@ func TestAuthCommandIncludesCoreActions(t *testing.T) {
 		t.Fatalf("find auth command: %v", err)
 	}
 
-	expected := []string{"clear", "init", "list", "remove", "status"}
+	expected := []string{"init", "list", "remove", "status"}
 	assertSubcommands(t, auth, expected)
-}
-
-func TestConfigCommandIncludesCoreActions(t *testing.T) {
-	f := cmdutil.NewDefault()
-
-	root := NewRootCommand(f)
-	config, _, err := root.Find([]string{"config"})
-	if err != nil {
-		t.Fatalf("find config command: %v", err)
-	}
-
-	expected := []string{"get", "list", "set"}
-	assertSubcommands(t, config, expected)
 }

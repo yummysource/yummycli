@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -10,6 +11,16 @@ const Gemini = "gemini"
 
 var supported = map[string]struct{}{
 	Gemini: {},
+}
+
+// All returns the names of all registered providers in sorted order.
+func All() []string {
+	names := make([]string, 0, len(supported))
+	for name := range supported {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // Normalize validates and normalizes a provider name.
