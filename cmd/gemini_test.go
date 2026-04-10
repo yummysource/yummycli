@@ -407,3 +407,39 @@ func TestGeminiNanoBananaUsesDefaultOutputFileNameWhenOutputIsOmitted(t *testing
 		t.Fatalf("output = %q, want %q", generator.req.Output, want)
 	}
 }
+
+func TestGeminiNanoBananaPassesInputImageToGenerator(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "edit this image into a watercolor style",
+		"--input-image", "./source.png",
+	})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	if !generator.called {
+		t.Fatal("GenerateImage was not called")
+	}
+
+	if generator.req.InputImage != "./source.png" {
+		t.Fatalf("input image = %q, want %q", generator.req.InputImage, "./source.png")
+	}
+}

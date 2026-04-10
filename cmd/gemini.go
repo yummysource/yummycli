@@ -57,6 +57,7 @@ type geminiNanoBananaOptions struct {
 	Model       string
 	AspectRatio string
 	ImageSize   string
+	InputImage  string
 }
 
 func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
@@ -80,6 +81,7 @@ func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
 	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model")
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", "16:9", "Gemini image aspect-ratio")
 	command.Flags().StringVar(&opts.ImageSize, "image-size", "1K", "Gemini image size")
+	command.Flags().StringVar(&opts.InputImage, "input-image", "", "Gemini input image path")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)
@@ -114,6 +116,7 @@ func runGeminiNanoBanana(f *cmdutil.Factory, opts *geminiNanoBananaOptions) erro
 		Model:       opts.Model,
 		AspectRatio: opts.AspectRatio,
 		ImageSize:   opts.ImageSize,
+		InputImage:  opts.InputImage,
 	}
 
 	return f.ImageGenerator.GenerateImage(context.Background(), req)

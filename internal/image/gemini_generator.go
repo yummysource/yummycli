@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"google.golang.org/genai"
 
@@ -57,10 +59,19 @@ func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 		config.ImageConfig.ImageSize = req.ImageSize
 	}
 
+	parts, err := buildGenerateContentParts(req)
+	if err != nil {
+		return err
+	}
+
+	contents := []*genai.Content{
+		genai.NewContentFromParts(parts, genai.RoleUser),
+	}
+
 	result, err := client.Models.GenerateContent(
 		ctx,
 		req.Model,
-		genai.Text(req.Prompt),
+		contents,
 		config,
 	)
 	if err != nil {
@@ -79,4 +90,39 @@ func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 	}
 
 	return fmt.Errorf("no image data returned")
+}
+
+func mimeTypeFromPath(path string) (string, error) {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".png":
+		return "image/png", nil
+	case ".jpg", ".jpeg":
+		return "image/jpeg", nil
+	case ".webp":
+		return "image/webp", nil
+	default:
+		return "", fmt.Errorf("unsupported input image type: %s", path)
+	}
+}
+
+func buildGenerateContentParts(req GenerateImageRequest) ([]*genai.Part, error) {
+	parts := make([]*genai.Part, 0, 2)
+
+	if req.InputImage != "" {
+		data, err := os.ReadFile(req.InputImage)
+		if err != nil {
+			return nil, err
+		}
+
+		mimeType, err := mimeTypeFromPath(req.InputImage)
+		if err != nil {
+			return nil, err
+		}
+
+		parts = append(parts, genai.NewPartFromBytes(data, mimeType))
+	}
+
+	parts = append(parts, genai.NewPartFromText(req.Prompt))
+
+	return parts, nil
 }

@@ -10,6 +10,7 @@ type GenerateImageRequest struct {
 	Model       string
 	AspectRatio string
 	ImageSize   string
+	InputImage  string
 }
 
 // ImageGenerator generates images from text prompts.
