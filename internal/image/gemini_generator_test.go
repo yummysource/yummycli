@@ -66,8 +66,8 @@ func TestBuildGenerateContentPartsWithInputImage(t *testing.T) {
 	}
 
 	req := GenerateImageRequest{
-		Prompt:     "turn this into watercolor",
-		InputImage: inputPath,
+		Prompt:      "turn this into watercolor",
+		InputImages: []string{inputPath},
 	}
 
 	parts, err := buildGenerateContentParts(req)

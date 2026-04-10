@@ -108,13 +108,13 @@ func mimeTypeFromPath(path string) (string, error) {
 func buildGenerateContentParts(req GenerateImageRequest) ([]*genai.Part, error) {
 	parts := make([]*genai.Part, 0, 2)
 
-	if req.InputImage != "" {
-		data, err := os.ReadFile(req.InputImage)
+	for _, imagePath := range req.InputImages {
+		data, err := os.ReadFile(imagePath)
 		if err != nil {
 			return nil, err
 		}
 
-		mimeType, err := mimeTypeFromPath(req.InputImage)
+		mimeType, err := mimeTypeFromPath(imagePath)
 		if err != nil {
 			return nil, err
 		}

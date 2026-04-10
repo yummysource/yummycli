@@ -439,7 +439,50 @@ func TestGeminiNanoBananaPassesInputImageToGenerator(t *testing.T) {
 		t.Fatal("GenerateImage was not called")
 	}
 
-	if generator.req.InputImage != "./source.png" {
-		t.Fatalf("input image = %q, want %q", generator.req.InputImage, "./source.png")
+	if generator.req.InputImages[0] != "./source.png" {
+		t.Fatalf("input image = %q, want %q", generator.req.InputImages[0], "./source.png")
+	}
+}
+
+func TestGeminiNanoBananaPassesMultipleInputImagesToGenerator(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "blend these into one watercolor composition",
+		"--input-image", "./a.png",
+		"--input-image", "./b.png",
+	})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	if !generator.called {
+		t.Fatal("GenerateImage was not called")
+	}
+
+	if len(generator.req.InputImages) != 2 {
+		t.Fatalf("input images length = %d, want %d", len(generator.req.InputImages), 2)
+	}
+	if generator.req.InputImages[0] != "./a.png" {
+		t.Fatalf("first input image = %q, want %q", generator.req.InputImages[0], "./a.png")
+	}
+	if generator.req.InputImages[1] != "./b.png" {
+		t.Fatalf("second input image = %q, want %q", generator.req.InputImages[1], "./b.png")
 	}
 }
