@@ -45,8 +45,6 @@ Optional output controls:
 --image-size <size>
 ```
 
-If `--output` is omitted, `yummycli` generates a default filename in the current working directory.
-
 Default values when omitted: `--aspect-ratio 16:9`, `--image-size 1K`, `--model gemini-3.1-flash-image-preview`.
 
 ## Execution Rules
@@ -55,7 +53,6 @@ Default values when omitted: `--aspect-ratio 16:9`, `--image-size 1K`, `--model 
 - Use one `--input-image` flag per local image file.
 - Preserve the user-provided order of reference images.
 - Prefer the default model unless the user asks for a specific model.
-- Use `--aspect-ratio` and `--image-size` only when the user specifies them or when a concrete output format is clearly required.
 
 ## Model Selection
 
@@ -77,15 +74,27 @@ Use the following model mapping rules:
 
 Do not switch models implicitly from vague quality words alone. Only apply the `pro` or `flash` mapping when the user's wording clearly refers to model choice.
 
-## Model and Aspect-Ratio Compatibility
+## Model Compatibility
 
-Some aspect ratios are only valid for the flash model. When the pro model is selected, restrict aspect-ratio choices to the intersection supported by both models:
+### Aspect ratio
 
-`1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`
+| Model | Supported values |
+|-------|-----------------|
+| `gemini-3.1-flash-image-preview` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
+| `gemini-3-pro-image-preview` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
+| (default / other) | `1:1` `3:4` `4:3` `9:16` `16:9` |
 
-The following ratios are flash-only and must not be used with the pro model:
+`1:4`, `1:8`, `4:1`, `8:1` are flash-only. Do not use them with the pro model.
 
-`1:4`, `1:8`, `4:1`, `8:1`
+### Image size
+
+| Model | Supported values |
+|-------|-----------------|
+| `gemini-3.1-flash-image-preview` | `512` `0.5K` `1K` `2K` `4K` |
+| `gemini-3-pro-image-preview` | `1K` `2K` `4K` |
+| (default / other) | `1K` `2K` `4K` |
+
+`512` and `0.5K` are flash-only. Do not use them with the pro model.
 
 ## Intent to Parameters
 
@@ -101,12 +110,17 @@ Aspect-ratio guidance:
 
 Image-size guidance:
 
-- Use `--image-size 4K` only when the user explicitly asks for 4K or a clearly print-grade / high-resolution deliverable.
+- Use `--image-size 4K` when the user explicitly asks for 4K or a clearly print-grade / high-resolution deliverable.
 - Use `--image-size 2K` when the user explicitly asks for 2K or a medium-resolution deliverable.
-- Use `--image-size 1K` only when the user explicitly asks for 1K or a lightweight preview-sized result.
-- If the user does not explicitly request output size, omit `--image-size`.
+- Use `--image-size 1K` when the user explicitly asks for 1K or a lightweight preview-sized result.
+- Use `--image-size 512` or `--image-size 0.5K` only when the user explicitly asks for a minimal-size output and the flash model is in use.
+- If the user does not explicitly request output size, omit `--image-size` and let `yummycli` use its default (`1K`).
 
 Do not guess `--image-size` from general quality adjectives alone.
+
+Output path guidance:
+
+- If `--output` is omitted, `yummycli` generates a default filename in the current working directory. Do not invent your own output filename unless the user explicitly provides one.
 
 ## Examples
 

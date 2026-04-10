@@ -40,12 +40,6 @@ Example:
 }
 ```
 
-## Default Output Behavior
-
-If an image command omits `--output`, `yummycli` generates a default filename in the current working directory.
-
-Do not invent your own output filename unless the user explicitly asks for one.
-
 ## Safety Rules
 
 - Only use local image files explicitly provided by the user.
