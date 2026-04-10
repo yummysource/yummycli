@@ -21,7 +21,16 @@ This skill uses one command for all Gemini image flows:
 
 ## Command Contract
 
-Always use:
+Two equivalent entry points are available:
+
+| Entry point | When to use |
+|-------------|-------------|
+| `yummycli gemini nanobanana` | Default — human-friendly, Gemini presets applied |
+| `yummycli image generate --provider gemini` | Scripting / automation — explicit, provider-agnostic form |
+
+Both share the same flags and the same Gemini defaults. Prefer `gemini nanobanana` unless the task explicitly requires the provider-agnostic form.
+
+Basic usage:
 
 ```bash
 yummycli gemini nanobanana --prompt "<prompt>"
