@@ -100,6 +100,12 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		if opts.Model == "" {
 			opts.Model = geminiDefaultModel
 		}
+		if opts.AspectRatio == "" {
+			opts.AspectRatio = "16:9"
+		}
+		if opts.ImageSize == "" {
+			opts.ImageSize = "1K"
+		}
 		if err := validateAspectRatio(opts.Model, opts.AspectRatio); err != nil {
 			return err
 		}

@@ -132,6 +132,12 @@ func TestImageGenerateUsesDefaultModelForGemini(t *testing.T) {
 	if generator.req.Model != geminiDefaultModel {
 		t.Fatalf("model = %q, want %q", generator.req.Model, geminiDefaultModel)
 	}
+	if generator.req.AspectRatio != "16:9" {
+		t.Fatalf("aspect ratio = %q, want %q", generator.req.AspectRatio, "16:9")
+	}
+	if generator.req.ImageSize != "1K" {
+		t.Fatalf("image size = %q, want %q", generator.req.ImageSize, "1K")
+	}
 }
 
 func TestImageGenerateRejectsUnsupportedAspectRatioForGemini(t *testing.T) {
