@@ -268,14 +268,16 @@ func TestGeminiNanoBananaReturnsErrorWhenImageGeneratorIsNotConfigured(t *testin
 func TestGeminiNanoBananaRejectsUnsupportedAspectRatio(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-
 	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
 	f := &cmdutil.Factory{
 		IOStreams: &cmdutil.IOStreams{
 			Out:    stdout,
 			ErrOut: stderr,
 		},
 		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
 		Output:          output.New(stdout),
 	}
 
