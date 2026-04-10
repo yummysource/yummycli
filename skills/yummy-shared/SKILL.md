@@ -1,0 +1,55 @@
+---
+name: yummy-shared
+version: 1.0.0
+description: "Use when operating yummycli for the first time, checking Gemini credential status, handling yummycli JSON command output, or applying shared CLI safety rules before image generation or editing."
+metadata:
+  requires:
+    bins: ["yummycli"]
+---
+
+# yummycli Shared Rules
+
+Shared operating rules for `yummycli`.
+
+## Authentication
+
+Before running Gemini image commands, confirm the provider is configured:
+
+```bash
+yummycli auth status --provider gemini
+```
+
+If Gemini is not configured, initialize it:
+
+```bash
+yummycli gemini init --api-key "<api-key>"
+```
+
+## Output Contract
+
+Image commands return JSON on stdout. Read the response and use the `output` field as the generated file path.
+
+Example:
+
+```json
+{
+  "provider": "gemini",
+  "output": "gemini_20260410123456_789.png",
+  "model": "gemini-3.1-flash-image-preview",
+  "inputImageCount": 2
+}
+```
+
+## Default Output Behavior
+
+If an image command omits `--output`, `yummycli` generates a default filename in the current working directory.
+
+Do not invent your own output filename unless the user explicitly asks for one.
+
+## Safety Rules
+
+- Only use local image files explicitly provided by the user.
+- Preserve the order of repeated `--input-image` flags.
+- Do not overwrite a user-specified output path unless the command is intentionally run that way.
+- If the command returns a validation error, fix the arguments before retrying.
+- Report the final output path back to the user after a successful run.
