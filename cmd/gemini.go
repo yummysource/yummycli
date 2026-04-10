@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -11,6 +12,22 @@ import (
 	internalimage "github.com/yummysource/yummycli/internal/image"
 	"github.com/yummysource/yummycli/internal/providers"
 )
+
+type geminiNanoBananaOptions struct {
+	Prompt      string
+	Output      string
+	Model       string
+	AspectRatio string
+	ImageSize   string
+	InputImages []string
+}
+
+type geminiNanoBananaResult struct {
+	Provider        string `json:"provider"`
+	Output          string `json:"output"`
+	Model           string `json:"model"`
+	InputImageCount int    `json:"inputImageCount"`
+}
 
 // NewCmdGemini creates the Gemini provider shortcut command.
 func NewCmdGemini(f *cmdutil.Factory) *cobra.Command {
@@ -49,15 +66,6 @@ func newCmdGeminiInit(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	return command
-}
-
-type geminiNanoBananaOptions struct {
-	Prompt      string
-	Output      string
-	Model       string
-	AspectRatio string
-	ImageSize   string
-	InputImages []string
 }
 
 func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
@@ -119,7 +127,18 @@ func runGeminiNanoBanana(f *cmdutil.Factory, opts *geminiNanoBananaOptions) erro
 		InputImages: opts.InputImages,
 	}
 
-	return f.ImageGenerator.GenerateImage(context.Background(), req)
+	if err := f.ImageGenerator.GenerateImage(context.Background(), req); err != nil {
+		return err
+	}
+
+	result := geminiNanoBananaResult{
+		Provider:        providers.Gemini,
+		Output:          opts.Output,
+		Model:           opts.Model,
+		InputImageCount: len(opts.InputImages),
+	}
+
+	return json.NewEncoder(f.IOStreams.Out).Encode(result)
 }
 
 func validateAspectRatio(opts *geminiNanoBananaOptions) error {

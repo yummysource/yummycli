@@ -486,3 +486,87 @@ func TestGeminiNanoBananaPassesMultipleInputImagesToGenerator(t *testing.T) {
 		t.Fatalf("second input image = %q, want %q", generator.req.InputImages[1], "./b.png")
 	}
 }
+
+func TestGeminiNanoBananaWritesJSONResultOnSuccess(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	originalNowFunc := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2026, 4, 10, 12, 34, 56, 789000000, time.Local)
+	}
+	defer func() {
+		nowFunc = originalNowFunc
+	}()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a banana on a plate",
+		"--input-image", "./a.png",
+		"--input-image", "./b.png",
+	})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := stdout.String()
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410123456_789.png\",\"model\":\"gemini-3.1-flash-image-preview\",\"inputImageCount\":2}\n"
+	if got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestGeminiNanoBananaWritesZeroInputImageCountForTextOnlyGeneration(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	originalNowFunc := nowFunc
+	nowFunc = func() time.Time {
+		return time.Date(2026, 4, 10, 8, 9, 10, 110000000, time.Local)
+	}
+	defer func() {
+		nowFunc = originalNowFunc
+	}()
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a banana on a plate",
+	})
+
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := stdout.String()
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410080910_110.png\",\"model\":\"gemini-3.1-flash-image-preview\",\"inputImageCount\":0}\n"
+	if got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
