@@ -4,6 +4,10 @@
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.23-blue.svg)](https://go.dev/)
 [![npm version](https://img.shields.io/npm/v/@yummysource/yummycli.svg)](https://www.npmjs.com/package/@yummysource/yummycli)
 
+[繁體中文](./README.zh-TW.md) | [简体中文](./README.zh.md) | [English](./README.md)
+
+<img src="./assets/logo.png" alt="yummycli logo" width="120" />
+
 An AI-friendly CLI for multimodal model providers — built for humans and AI Agents.
 
 Supports image generation and editing via [Gemini](https://deepmind.google/technologies/gemini/), with more providers (Claude, OpenAI, Qwen) planned.
