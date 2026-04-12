@@ -2,8 +2,21 @@
 name: yummy-shared
 version: 1.0.0
 description: "Use when operating yummycli for the first time, checking Gemini credential status, handling yummycli JSON command output, or applying shared CLI safety rules before image generation or editing."
+always: true
 metadata:
   requires:
+    bins: ["yummycli"]
+  openclaw:
+    requires:
+      bins: ["yummycli"]
+      env: ["GEMINI_API_KEY"]
+    primaryEnv: GEMINI_API_KEY
+  hermes:
+    tags: [yummycli, shared, gemini, authentication]
+    requires_toolsets: ["yummycli"]
+install:
+  - kind: node
+    package: "@yummysource/yummycli"
     bins: ["yummycli"]
 ---
 
