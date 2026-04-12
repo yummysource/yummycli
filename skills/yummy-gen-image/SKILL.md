@@ -1,15 +1,33 @@
 ---
-name: generate-image
+name: yummy-gen-image
 version: 1.0.0
 description: "Use when the user wants to generate or edit raster images with Gemini through yummycli, including prompt-only generation, single-image editing, and multi-image reference editing."
 metadata:
   requires:
+    bins: ["yummycli"]
+    skills: ["yummy-shared"]
+  openclaw:
+    requires:
+      bins: ["yummycli"]
+    primaryEnv: GEMINI_API_KEY
+    related_skills: ["yummy-shared"]
+  hermes:
+    tags: [image, gemini, generation, editing, multimodal]
+    related_skills: ["yummy-shared"]
+    requires_toolsets: ["yummycli"]
+install:
+  - kind: node
+    package: "@yummysource/yummycli"
     bins: ["yummycli"]
 ---
 
 # Generate Image
 
 Create or edit images with `yummycli gemini nanobanana`.
+
+## When to Use
+
+Load this skill when the user asks to generate, create, or edit an image using AI — including text-to-image generation, style transfer, image editing with a reference photo, or multi-image compositing.
 
 > **Prerequisite:** Apply the `yummy-shared` skill first.
 

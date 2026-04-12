@@ -270,7 +270,7 @@ yummycli ships with Skills — structured instruction files that teach AI Agents
 | Skill | Description |
 |-------|-------------|
 | [`yummy-shared`](./skills/yummy-shared/SKILL.md) | Credential checks, output contract, and shared safety rules — loaded automatically by all other skills |
-| [`generate-image`](./skills/generate-image/SKILL.md) | Text-to-image generation, single-image editing, and multi-image reference editing via Gemini |
+| [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | Text-to-image generation, single-image editing, and multi-image reference editing via Gemini |
 
 Skills are located in [`./skills/`](./skills/).
 
