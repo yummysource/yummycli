@@ -1,6 +1,6 @@
 {
   "name": "@yummysource/yummycli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-friendly CLI for multimodal model providers (Gemini, and more)",
   "license": "MIT",
   "repository": {
