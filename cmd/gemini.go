@@ -24,6 +24,7 @@ func NewCmdGemini(f *cmdutil.Factory) *cobra.Command {
 	command.AddCommand(
 		newCmdGeminiInit(f),
 		newCmdGeminiNanoBanana(f),
+		newCmdGeminiVeo(f),
 	)
 
 	return command
@@ -86,6 +87,44 @@ func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)
 	}
+	return command
+}
+
+// newCmdGeminiVeo is a provider shortcut for video generation with Gemini Veo,
+// equivalent to `video generate --provider gemini` with Gemini-specific defaults
+// pre-filled. Users only need to supply --prompt; all other flags are optional.
+func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
+	// Pre-fill Gemini Veo defaults; the user only needs --prompt.
+	opts := &videoGenerateOptions{
+		Provider:    providers.Gemini,
+		Model:       "veo-2.0-generate-001",
+		AspectRatio: "16:9",
+		Duration:    8,
+		Resolution:  "720p",
+	}
+
+	command := &cobra.Command{
+		Use:   "veo",
+		Short: "Generate videos with Gemini Veo",
+		Annotations: map[string]string{
+			"canonical": "video generate --provider " + providers.Gemini,
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runVideoGenerate(f, opts)
+		},
+	}
+
+	command.Flags().StringVar(&opts.Prompt, "prompt", "", "Video generation prompt")
+	command.Flags().StringVar(&opts.Output, "output", "", "Output video path (.mp4)")
+	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Veo model to use")
+	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "Video aspect ratio (16:9 or 9:16)")
+	command.Flags().IntVar(&opts.Duration, "duration", opts.Duration, "Duration in seconds (4, 6, or 8)")
+	command.Flags().StringVar(&opts.Resolution, "resolution", opts.Resolution, "Video resolution (720p or 1080p)")
+
+	if err := command.MarkFlagRequired("prompt"); err != nil {
+		panic(err)
+	}
+
 	return command
 }
 
