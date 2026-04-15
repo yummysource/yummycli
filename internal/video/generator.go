@@ -45,6 +45,12 @@ type GenerateVideoRequest struct {
 	// Resolution is the video resolution, e.g. "720p" or "1080p".
 	// 1080p requires Duration == 8.
 	Resolution string
+
+	// ProgressFn is an optional callback invoked during polling with a status
+	// message such as "Generating video... 45s elapsed". A nil value is safe.
+	// Using a callback rather than an interface avoids circular package imports
+	// between video and cmdutil.
+	ProgressFn func(message string)
 }
 
 // GenerateVideoResult holds metadata about a successfully generated video.
