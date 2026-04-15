@@ -1,0 +1,59 @@
+{
+  "version": "1",
+  "capability": "video",
+  "short": "Generate and manage videos",
+  "operations": [
+    {
+      "use": "generate",
+      "short": "Generate a video from a text prompt using Google Veo",
+      "provider": "gemini",
+      "flags": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "usage": "Text prompt describing the video to generate"
+        },
+        {
+          "name": "output",
+          "type": "string",
+          "usage": "Output file path (must end in .mp4; auto-generated if omitted)"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "default": "veo-2.0-generate-001",
+          "usage": "Veo model to use",
+          "enum": ["veo-2.0-generate-001", "veo-3.0-generate-001", "veo-3.0-fast-generate-001"]
+        },
+        {
+          "name": "aspect-ratio",
+          "type": "string",
+          "default": "16:9",
+          "usage": "Video aspect ratio",
+          "enum": ["16:9", "9:16"]
+        },
+        {
+          "name": "duration",
+          "type": "int",
+          "default": "8",
+          "usage": "Duration in seconds; valid values: 4, 6, 8"
+        },
+        {
+          "name": "resolution",
+          "type": "string",
+          "default": "720p",
+          "usage": "Video resolution (1080p requires duration=8)",
+          "enum": ["720p", "1080p"]
+        },
+        {
+          "name": "provider",
+          "type": "string",
+          "default": "gemini",
+          "usage": "AI provider",
+          "enum": ["gemini"]
+        }
+      ]
+    }
+  ]
+}
