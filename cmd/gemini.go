@@ -99,7 +99,7 @@ func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
 		Provider:    providers.Gemini,
 		Model:       "veo-2.0-generate-001",
 		AspectRatio: "16:9",
-		Duration:    8,
+		Duration:    5,
 		Resolution:  "720p",
 	}
 
@@ -118,7 +118,7 @@ func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
 	command.Flags().StringVar(&opts.Output, "output", "", "Output video path (.mp4)")
 	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Veo model to use")
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "Video aspect ratio (16:9 or 9:16)")
-	command.Flags().IntVar(&opts.Duration, "duration", opts.Duration, "Duration in seconds (4, 6, or 8)")
+	command.Flags().IntVar(&opts.Duration, "duration", opts.Duration, "Duration in seconds (5–8)")
 	command.Flags().StringVar(&opts.Resolution, "resolution", opts.Resolution, "Video resolution (720p or 1080p)")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {

@@ -254,7 +254,7 @@ func applyVideoDefaults(opts *videoGenerateOptions) error {
 			opts.AspectRatio = "16:9"
 		}
 		if opts.Duration == 0 {
-			opts.Duration = 8
+			opts.Duration = 5
 		}
 		if opts.Resolution == "" {
 			opts.Resolution = "720p"
@@ -268,10 +268,10 @@ func applyVideoDefaults(opts *videoGenerateOptions) error {
 // validateVideoOptions runs client-side validation before submitting any API call.
 // Errors returned here are fast-fail: they prevent wasting quota on a bad request.
 func validateVideoOptions(opts *videoGenerateOptions) error {
-	// Duration must be one of the values Veo accepts.
-	validDurations := map[int]bool{4: true, 6: true, 8: true}
-	if !validDurations[opts.Duration] {
-		return fmt.Errorf("duration must be 4, 6, or 8 seconds (got %d)", opts.Duration)
+	// Duration must be within the range the Veo API accepts (5–8 seconds inclusive).
+	// Confirmed via live API test: values below 5 return INVALID_ARGUMENT.
+	if opts.Duration < 5 || opts.Duration > 8 {
+		return fmt.Errorf("duration must be between 5 and 8 seconds (got %d)", opts.Duration)
 	}
 
 	// 1080p requires an 8-second clip.
