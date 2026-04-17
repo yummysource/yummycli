@@ -48,8 +48,8 @@
         },
         {
           "name": "input-image",
-          "type": "string",
-          "usage": "Path to a local PNG or JPEG image used as the starting frame (image-to-video)"
+          "type": "stringarray",
+          "usage": "Local PNG/JPEG image path; repeat for up to 3 images (1 image = starting frame, 2-3 = reference images)"
         },
         {
           "name": "provider",

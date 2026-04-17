@@ -67,17 +67,17 @@ func buildCapabilityCommand(f *cmdutil.Factory, spec cmdspec.CapabilitySpec) *co
 // Map values are not addressable in Go, so we use a pointer-per-flag pattern
 // rather than a plain map[string]string.
 func buildOperationCommand(f *cmdutil.Factory, cap cmdspec.CapabilitySpec, op cmdspec.OperationSpec) *cobra.Command {
-	// fvStr and fvInt hold pointers to string and int flag values respectively.
-	// Each pointer is allocated once and passed to Cobra via Flags().StringVar /
-	// Flags().IntVar, so the CLI runtime can write the parsed value into it.
+	// fvStr, fvInt, and fvStrArr hold typed flag value pointers.
+	// Each pointer is allocated once so Cobra can write parsed values into it.
 	fvStr := make(map[string]*string)
 	fvInt := make(map[string]*int)
+	fvStrArr := make(map[string]*[]string)
 
 	cmd := &cobra.Command{
 		Use:   op.Use,
 		Short: op.Short,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return dispatchVideoOperation(f, cap.Capability+"."+op.Use, fvStr, fvInt)
+			return dispatchVideoOperation(f, cap.Capability+"."+op.Use, fvStr, fvInt, fvStrArr)
 		},
 	}
 
@@ -101,6 +101,11 @@ func buildOperationCommand(f *cmdutil.Factory, cap cmdspec.CapabilitySpec, op cm
 			fvInt[flag.Name] = p
 			defaultInt, _ := strconv.Atoi(flag.Default)
 			cmd.Flags().IntVar(p, flag.Name, defaultInt, usage)
+
+		case "stringarray":
+			p := new([]string)
+			fvStrArr[flag.Name] = p
+			cmd.Flags().StringArrayVar(p, flag.Name, nil, usage)
 		}
 
 		if flag.Required {
@@ -129,7 +134,7 @@ func buildFlagUsage(flag cmdspec.FlagSpec) string {
 // Adding a new operation only requires:
 //  1. A new entry in video.json.
 //  2. A new case here pointing to a new runXxx function.
-func dispatchVideoOperation(f *cmdutil.Factory, key string, fvStr map[string]*string, fvInt map[string]*int) error {
+func dispatchVideoOperation(f *cmdutil.Factory, key string, fvStr map[string]*string, fvInt map[string]*int, fvStrArr map[string]*[]string) error {
 	getString := func(name string) string {
 		if p, ok := fvStr[name]; ok {
 			return *p
@@ -142,6 +147,12 @@ func dispatchVideoOperation(f *cmdutil.Factory, key string, fvStr map[string]*st
 		}
 		return 0
 	}
+	getStrArr := func(name string) []string {
+		if p, ok := fvStrArr[name]; ok && p != nil {
+			return *p
+		}
+		return nil
+	}
 
 	switch key {
 	case "video.generate":
@@ -153,7 +164,7 @@ func dispatchVideoOperation(f *cmdutil.Factory, key string, fvStr map[string]*st
 			AspectRatio: getString("aspect-ratio"),
 			Duration:    getInt("duration"),
 			Resolution:  getString("resolution"),
-			InputImage:  getString("input-image"),
+			InputImages: getStrArr("input-image"),
 		}
 		return runVideoGenerate(f, opts)
 
@@ -172,9 +183,11 @@ type videoGenerateOptions struct {
 	AspectRatio string
 	Duration    int
 	Resolution  string
-	// InputImage is an optional path to a local image file used as the starting
-	// frame. When set the request is treated as image-to-video; otherwise text-to-video.
-	InputImage string
+	// InputImages holds optional paths to local images. Count determines routing:
+	//   0 → text-to-video
+	//   1 → starting frame (image-to-video)
+	//   2-3 → ASSET reference images
+	InputImages []string
 }
 
 // runVideoGenerate is the canonical implementation for video generation.
@@ -228,7 +241,7 @@ func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
 		AspectRatio: opts.AspectRatio,
 		Duration:    opts.Duration,
 		Resolution:  opts.Resolution,
-		InputImage:  opts.InputImage,
+		InputImages: opts.InputImages,
 		ProgressFn:  progressFn,
 	}
 
@@ -330,9 +343,12 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		return fmt.Errorf("resolution %s requires duration=8 (got %d)", opts.Resolution, opts.Duration)
 	}
 
-	// Validate the input image when provided.
-	if opts.InputImage != "" {
-		if err := validateInputImage(opts.InputImage); err != nil {
+	// Validate all input images when provided.
+	if len(opts.InputImages) > 3 {
+		return fmt.Errorf("at most 3 input images are supported (got %d)", len(opts.InputImages))
+	}
+	for _, img := range opts.InputImages {
+		if err := validateInputImage(img); err != nil {
 			return err
 		}
 	}

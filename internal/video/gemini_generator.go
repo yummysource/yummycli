@@ -68,26 +68,41 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		config.DurationSeconds = &d
 	}
 
-	// Step 1: Optionally load the input image for image-to-video generation.
-	// When InputImage is set the file is read, MIME type inferred from extension,
-	// and passed as the starting frame. Text-to-video passes nil.
-	var inputImage *genai.Image
-	if req.InputImage != "" {
-		data, err := os.ReadFile(req.InputImage)
+	// Step 1: Route image inputs based on count.
+	//   0 images → text-to-video: pass nil starting frame, no reference images.
+	//   1 image  → image-to-video: pass as the starting frame argument.
+	//   2-3 images → reference-guided: populate config.ReferenceImages with ASSET type.
+	var startingFrame *genai.Image
+	switch len(req.InputImages) {
+	case 0:
+		// text-to-video, nothing to do
+
+	case 1:
+		img, err := loadImage(req.InputImages[0])
 		if err != nil {
-			return nil, fmt.Errorf("reading input image %s: %w", req.InputImage, err)
+			return nil, err
 		}
-		mimeType := mime.TypeByExtension(filepath.Ext(req.InputImage))
-		if mimeType == "" {
-			mimeType = "image/jpeg" // fallback; Veo accepts JPEG and PNG
+		startingFrame = img
+
+	default:
+		refs := make([]*genai.VideoGenerationReferenceImage, 0, len(req.InputImages))
+		for _, path := range req.InputImages {
+			img, err := loadImage(path)
+			if err != nil {
+				return nil, err
+			}
+			refs = append(refs, &genai.VideoGenerationReferenceImage{
+				Image:         img,
+				ReferenceType: genai.VideoGenerationReferenceTypeAsset,
+			})
 		}
-		inputImage = &genai.Image{ImageBytes: data, MIMEType: mimeType}
+		config.ReferenceImages = refs
 	}
 
 	// Step 2: Submit the job. GenerateVideos returns immediately with an operation
 	// handle — the actual video generation happens asynchronously on Veo's side.
 	startTime := time.Now()
-	operation, err := client.Models.GenerateVideos(ctx, req.Model, req.Prompt, inputImage, config)
+	operation, err := client.Models.GenerateVideos(ctx, req.Model, req.Prompt, startingFrame, config)
 	if err != nil {
 		return nil, fmt.Errorf("submitting video generation job: %w", err)
 	}
@@ -156,6 +171,20 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		AspectRatio:     req.AspectRatio,
 		Resolution:      req.Resolution,
 		ElapsedSeconds:  elapsed,
-		InputImage:      req.InputImage,
+		InputImages:     req.InputImages,
 	}, nil
+}
+
+// loadImage reads a local file and returns a genai.Image with MIME type inferred
+// from the file extension. Supports .png, .jpg, and .jpeg.
+func loadImage(path string) (*genai.Image, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading image %s: %w", path, err)
+	}
+	mimeType := mime.TypeByExtension(filepath.Ext(path))
+	if mimeType == "" {
+		mimeType = "image/jpeg"
+	}
+	return &genai.Image{ImageBytes: data, MIMEType: mimeType}, nil
 }

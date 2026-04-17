@@ -46,10 +46,12 @@ type GenerateVideoRequest struct {
 	// 1080p requires Duration == 8.
 	Resolution string
 
-	// InputImage is an optional path to a local image file (PNG or JPEG) used as
-	// the starting frame for image-to-video generation. When empty the request is
-	// treated as text-to-video.
-	InputImage string
+	// InputImages holds optional paths to local image files (PNG or JPEG) for
+	// image-guided generation. The generator routes automatically based on count:
+	//   0 images → text-to-video
+	//   1 image  → passed as the starting frame (image *genai.Image)
+	//   2-3 images → passed as ASSET reference images (config.ReferenceImages)
+	InputImages []string
 
 	// ProgressFn is an optional callback invoked during polling with a status
 	// message such as "Generating video... 45s elapsed". A nil value is safe.
@@ -82,7 +84,7 @@ type GenerateVideoResult struct {
 	// ElapsedSeconds is the wall-clock time from submission to file written.
 	ElapsedSeconds int `json:"elapsed_seconds"`
 
-	// InputImage is the path of the input image used as the starting frame, or
-	// empty for text-to-video requests.
-	InputImage string `json:"input_image,omitempty"`
+	// InputImages lists the input image paths used for this request, or nil for
+	// text-to-video requests.
+	InputImages []string `json:"input_images,omitempty"`
 }
