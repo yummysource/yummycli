@@ -11,7 +11,7 @@ func TestRootCommandIncludesCoreGroups(t *testing.T) {
 
 	root := NewRootCommand(f)
 
-	expected := []string{"auth", "gemini", "image", "version"}
+	expected := []string{"auth", "gemini", "image", "version", "video"}
 
 	assertSubcommands(t, root, expected)
 }
@@ -24,7 +24,7 @@ func TestGeminiCommandIncludesPhaseOneAliases(t *testing.T) {
 		t.Fatalf("find gemini command: %v", err)
 	}
 
-	expected := []string{"init", "nanobanana"}
+	expected := []string{"init", "nanobanana", "veo"}
 	assertSubcommands(t, gemini, expected)
 
 	for _, check := range []struct {
@@ -33,6 +33,7 @@ func TestGeminiCommandIncludesPhaseOneAliases(t *testing.T) {
 	}{
 		{name: "init", canonical: "auth init --provider gemini"},
 		{name: "nanobanana", canonical: "image generate --provider gemini --preset nano-banana"},
+		{name: "veo", canonical: "video generate --provider gemini"},
 	} {
 		command, _, err := gemini.Find([]string{check.name})
 		if err != nil {
