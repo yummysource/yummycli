@@ -97,10 +97,10 @@ func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
 	// Pre-fill Gemini Veo defaults; the user only needs --prompt.
 	opts := &videoGenerateOptions{
 		Provider:    providers.Gemini,
-		Model:       "veo-2.0-generate-001",
+		Model:       "veo-3.1-fast-generate-preview",
 		AspectRatio: "16:9",
-		Duration:    5,
-		Resolution:  "720p",
+		Duration:    8,
+		Resolution:  "1080p",
 	}
 
 	command := &cobra.Command{
@@ -118,8 +118,8 @@ func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
 	command.Flags().StringVar(&opts.Output, "output", "", "Output video path (.mp4)")
 	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Veo model to use")
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "Video aspect ratio (16:9 or 9:16)")
-	command.Flags().IntVar(&opts.Duration, "duration", opts.Duration, "Duration in seconds (5–8)")
-	command.Flags().StringVar(&opts.Resolution, "resolution", opts.Resolution, "Video resolution (720p or 1080p)")
+	command.Flags().IntVar(&opts.Duration, "duration", opts.Duration, "Duration in seconds; veo-2: 5/6/7/8, veo-3+: 4/6/8")
+	command.Flags().StringVar(&opts.Resolution, "resolution", opts.Resolution, "Video resolution (720p, 1080p, 4k; veo-3.1 only for 4k)")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)

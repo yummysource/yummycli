@@ -248,16 +248,16 @@ func applyVideoDefaults(opts *videoGenerateOptions) error {
 	switch opts.Provider {
 	case providers.Gemini:
 		if opts.Model == "" {
-			opts.Model = "veo-2.0-generate-001"
+			opts.Model = "veo-3.1-fast-generate-preview"
 		}
 		if opts.AspectRatio == "" {
 			opts.AspectRatio = "16:9"
 		}
 		if opts.Duration == 0 {
-			opts.Duration = 5
+			opts.Duration = 8
 		}
 		if opts.Resolution == "" {
-			opts.Resolution = "720p"
+			opts.Resolution = "1080p"
 		}
 	default:
 		return fmt.Errorf("unsupported provider: %s", opts.Provider)
@@ -265,18 +265,64 @@ func applyVideoDefaults(opts *videoGenerateOptions) error {
 	return nil
 }
 
+// validDurationsForModel returns the set of accepted duration values (seconds) for a model.
+// veo-2 accepts {5,6,7,8}; veo-3+ accepts {4,6,8}.
+func validDurationsForModel(model string) []int {
+	if strings.HasPrefix(model, "veo-2") {
+		return []int{5, 6, 7, 8}
+	}
+	return []int{4, 6, 8}
+}
+
+// validResolutionsForModel returns the accepted resolution values for a model.
+// veo-2 is locked to 720p; veo-3.0 adds 1080p; veo-3.1 also adds 4k.
+func validResolutionsForModel(model string) []string {
+	switch {
+	case strings.HasPrefix(model, "veo-3.1"):
+		return []string{"720p", "1080p", "4k"}
+	case strings.HasPrefix(model, "veo-3"):
+		return []string{"720p", "1080p"}
+	default: // veo-2
+		return []string{"720p"}
+	}
+}
+
 // validateVideoOptions runs client-side validation before submitting any API call.
 // Errors returned here are fast-fail: they prevent wasting quota on a bad request.
 func validateVideoOptions(opts *videoGenerateOptions) error {
-	// Duration must be within the range the Veo API accepts (5–8 seconds inclusive).
-	// Confirmed via live API test: values below 5 return INVALID_ARGUMENT.
-	if opts.Duration < 5 || opts.Duration > 8 {
-		return fmt.Errorf("duration must be between 5 and 8 seconds (got %d)", opts.Duration)
+	// Duration must be one of the discrete values the model accepts.
+	validDurations := validDurationsForModel(opts.Model)
+	durationOK := false
+	for _, v := range validDurations {
+		if opts.Duration == v {
+			durationOK = true
+			break
+		}
+	}
+	if !durationOK {
+		allowed := make([]string, len(validDurations))
+		for i, v := range validDurations {
+			allowed[i] = fmt.Sprintf("%d", v)
+		}
+		return fmt.Errorf("duration %d is not valid for model %s (accepted: %s)", opts.Duration, opts.Model, strings.Join(allowed, ", "))
 	}
 
-	// 1080p requires an 8-second clip.
-	if opts.Resolution == "1080p" && opts.Duration != 8 {
-		return fmt.Errorf("resolution 1080p requires duration=8 (got %d)", opts.Duration)
+	// Resolution must be one the model supports.
+	validResolutions := validResolutionsForModel(opts.Model)
+	resolutionOK := false
+	for _, v := range validResolutions {
+		if opts.Resolution == v {
+			resolutionOK = true
+			break
+		}
+	}
+	if !resolutionOK {
+		return fmt.Errorf("resolution %q is not supported by model %s (accepted: %s)", opts.Resolution, opts.Model, strings.Join(validResolutions, ", "))
+	}
+
+	// High-resolution clips require a full 8-second duration.
+	if (opts.Resolution == "1080p" || opts.Resolution == "4k") && opts.Duration != 8 {
+		return fmt.Errorf("resolution %s requires duration=8 (got %d)", opts.Resolution, opts.Duration)
 	}
 
 	// Validate or generate the output path.

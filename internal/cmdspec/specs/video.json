@@ -22,9 +22,9 @@
         {
           "name": "model",
           "type": "string",
-          "default": "veo-2.0-generate-001",
+          "default": "veo-3.1-fast-generate-preview",
           "usage": "Veo model to use",
-          "enum": ["veo-2.0-generate-001", "veo-3.0-generate-001", "veo-3.0-fast-generate-001"]
+          "enum": ["veo-3.1-fast-generate-preview", "veo-3.1-generate-preview", "veo-3.0-generate-001", "veo-3.0-fast-generate-001", "veo-2.0-generate-001"]
         },
         {
           "name": "aspect-ratio",
@@ -36,15 +36,15 @@
         {
           "name": "duration",
           "type": "int",
-          "default": "5",
-          "usage": "Duration in seconds (5–8, inclusive)"
+          "default": "8",
+          "usage": "Duration in seconds; veo-2: 5/6/7/8, veo-3+: 4/6/8"
         },
         {
           "name": "resolution",
           "type": "string",
-          "default": "720p",
-          "usage": "Video resolution (1080p requires duration=8)",
-          "enum": ["720p", "1080p"]
+          "default": "1080p",
+          "usage": "Video resolution; veo-3.1 also supports 4k (requires duration=8)",
+          "enum": ["720p", "1080p", "4k"]
         },
         {
           "name": "provider",
