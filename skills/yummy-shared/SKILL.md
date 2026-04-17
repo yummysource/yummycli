@@ -40,9 +40,9 @@ yummycli gemini init --api-key "<api-key>"
 
 ## Output Contract
 
-Image commands return JSON on stdout. Read the response and use the `output` field as the generated file path.
+All `yummycli` generation commands return JSON on stdout. Read the response and use the `output` field as the generated file path.
 
-Example:
+Image example:
 
 ```json
 {
@@ -50,6 +50,20 @@ Example:
   "output": "gemini_20260410123456_789.png",
   "model": "gemini-3.1-flash-image-preview",
   "inputImageCount": 2
+}
+```
+
+Video example:
+
+```json
+{
+  "provider": "gemini",
+  "output": "veo_20260417_142301_047.mp4",
+  "model": "veo-3.1-fast-generate-preview",
+  "duration_seconds": 8,
+  "aspect_ratio": "16:9",
+  "resolution": "1080p",
+  "elapsed_seconds": 73
 }
 ```
 
