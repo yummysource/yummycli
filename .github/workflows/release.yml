@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      npm_only:
+        description: "Skip GoReleaser and only publish to npm (for testing)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -17,11 +23,13 @@ jobs:
           fetch-depth: 0
 
       - uses: actions/setup-go@v5
+        if: ${{ !inputs.npm_only }}
         with:
           go-version-file: go.mod
           cache: true
 
       - uses: goreleaser/goreleaser-action@v6
+        if: ${{ !inputs.npm_only }}
         with:
           version: latest
           args: release --clean
