@@ -6,172 +6,16 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/yummysource/yummycli/internal/cmdspec"
 	"github.com/yummysource/yummycli/internal/cmdutil"
 	"github.com/yummysource/yummycli/internal/providers"
 	internalvideo "github.com/yummysource/yummycli/internal/video"
 )
-
-// NewCmdVideo creates the provider-agnostic video command group, loading its
-// subcommands dynamically from the embedded JSON spec files.
-//
-// This mirrors how lark-cli's RegisterServiceCommands works: the JSON spec
-// drives the command tree, and Go handles the actual execution logic.
-func NewCmdVideo(f *cmdutil.Factory) *cobra.Command {
-	specs, err := cmdspec.LoadAll()
-	if err != nil {
-		// Non-fatal: return an empty group so the binary still starts.
-		fmt.Fprintf(os.Stderr, "warning: could not load capability specs: %v\n", err)
-		return &cobra.Command{Use: "video", Short: "Generate and manage videos"}
-	}
-
-	// Find the "video" capability spec and build its command group.
-	for _, spec := range specs {
-		if spec.Capability == "video" {
-			return buildCapabilityCommand(f, spec)
-		}
-	}
-
-	return &cobra.Command{Use: "video", Short: "Generate and manage videos"}
-}
-
-// buildCapabilityCommand creates a Cobra command group for a CapabilitySpec and
-// registers one subcommand per operation. This is the yummycli equivalent of
-// lark-cli's registerService + registerResource + registerMethod chain.
-func buildCapabilityCommand(f *cmdutil.Factory, spec cmdspec.CapabilitySpec) *cobra.Command {
-	group := &cobra.Command{
-		Use:   spec.Capability,
-		Short: spec.Short,
-	}
-
-	for _, op := range spec.Operations {
-		op := op // capture loop variable for the closure
-		group.AddCommand(buildOperationCommand(f, spec, op))
-	}
-
-	return group
-}
-
-// buildOperationCommand creates a single Cobra leaf command for an OperationSpec.
-// Flags are registered dynamically from the spec; the run function is resolved
-// by capability+operation name via dispatchVideoOperation.
-//
-// flagValues stores per-flag pointers so Cobra can write flag values into them.
-// Map values are not addressable in Go, so we use a pointer-per-flag pattern
-// rather than a plain map[string]string.
-func buildOperationCommand(f *cmdutil.Factory, cap cmdspec.CapabilitySpec, op cmdspec.OperationSpec) *cobra.Command {
-	// fvStr, fvInt, and fvStrArr hold typed flag value pointers.
-	// Each pointer is allocated once so Cobra can write parsed values into it.
-	fvStr := make(map[string]*string)
-	fvInt := make(map[string]*int)
-	fvStrArr := make(map[string]*[]string)
-
-	cmd := &cobra.Command{
-		Use:   op.Use,
-		Short: op.Short,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return dispatchVideoOperation(f, cap.Capability+"."+op.Use, fvStr, fvInt, fvStrArr)
-		},
-	}
-
-	// Register each flag defined in the spec onto the Cobra command.
-	// Enum values are embedded in the usage string so --help shows them.
-	for _, flag := range op.Flags {
-		usage := buildFlagUsage(flag)
-
-		switch flag.Type {
-		case "string":
-			p := new(string)
-			*p = flag.Default
-			fvStr[flag.Name] = p
-			cmd.Flags().StringVar(p, flag.Name, flag.Default, usage)
-
-		case "int":
-			p := new(int)
-			if v, err := strconv.Atoi(flag.Default); err == nil {
-				*p = v
-			}
-			fvInt[flag.Name] = p
-			defaultInt, _ := strconv.Atoi(flag.Default)
-			cmd.Flags().IntVar(p, flag.Name, defaultInt, usage)
-
-		case "stringarray":
-			p := new([]string)
-			fvStrArr[flag.Name] = p
-			cmd.Flags().StringArrayVar(p, flag.Name, nil, usage)
-		}
-
-		if flag.Required {
-			if err := cmd.MarkFlagRequired(flag.Name); err != nil {
-				panic(fmt.Sprintf("cmdspec: marking %s as required: %v", flag.Name, err))
-			}
-		}
-	}
-
-	return cmd
-}
-
-// buildFlagUsage constructs a usage string for a FlagSpec, appending the enum
-// list when present so users can see valid values in --help output.
-func buildFlagUsage(flag cmdspec.FlagSpec) string {
-	if len(flag.Enum) > 0 {
-		return fmt.Sprintf("%s (one of: %s)", flag.Usage, strings.Join(flag.Enum, ", "))
-	}
-	return flag.Usage
-}
-
-// dispatchVideoOperation routes a capability+operation key to its run function.
-// This mirrors lark-cli's serviceMethodRun: the dispatch layer receives resolved
-// flag values and forwards them to the appropriate implementation.
-//
-// Adding a new operation only requires:
-//  1. A new entry in video.json.
-//  2. A new case here pointing to a new runXxx function.
-func dispatchVideoOperation(f *cmdutil.Factory, key string, fvStr map[string]*string, fvInt map[string]*int, fvStrArr map[string]*[]string) error {
-	getString := func(name string) string {
-		if p, ok := fvStr[name]; ok {
-			return *p
-		}
-		return ""
-	}
-	getInt := func(name string) int {
-		if p, ok := fvInt[name]; ok {
-			return *p
-		}
-		return 0
-	}
-	getStrArr := func(name string) []string {
-		if p, ok := fvStrArr[name]; ok && p != nil {
-			return *p
-		}
-		return nil
-	}
-
-	switch key {
-	case "video.generate":
-		opts := &videoGenerateOptions{
-			Provider:    getString("provider"),
-			Prompt:      getString("prompt"),
-			Output:      getString("output"),
-			Model:       getString("model"),
-			AspectRatio: getString("aspect-ratio"),
-			Duration:    getInt("duration"),
-			Resolution:  getString("resolution"),
-			InputImages: getStrArr("input-image"),
-		}
-		return runVideoGenerate(f, opts)
-
-	default:
-		return fmt.Errorf("unknown operation: %s", key)
-	}
-}
 
 // videoGenerateOptions is the canonical options struct for video generation.
 // Shared by `video generate` (capability layer) and `gemini veo` (shortcut).
@@ -190,10 +34,53 @@ type videoGenerateOptions struct {
 	InputImages []string
 }
 
+// NewCmdVideo creates the provider-agnostic video command group.
+func NewCmdVideo(f *cmdutil.Factory) *cobra.Command {
+	command := &cobra.Command{
+		Use:   "video",
+		Short: "Generate and manage videos",
+	}
+
+	command.AddCommand(newCmdVideoGenerate(f))
+
+	return command
+}
+
+// newCmdVideoGenerate creates the `video generate` subcommand.
+func newCmdVideoGenerate(f *cmdutil.Factory) *cobra.Command {
+	opts := &videoGenerateOptions{}
+
+	command := &cobra.Command{
+		Use:   "generate",
+		Short: "Generate a video from a text prompt",
+		Annotations: map[string]string{
+			"capability": "video.generate",
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runVideoGenerate(f, opts)
+		},
+	}
+
+	command.Flags().StringVar(&opts.Provider, "provider", "", "AI provider (e.g. gemini)")
+	command.Flags().StringVar(&opts.Prompt, "prompt", "", "Video generation prompt")
+	command.Flags().StringVar(&opts.Output, "output", "", "Output file path (must end in .mp4; auto-generated if omitted)")
+	command.Flags().StringVar(&opts.Model, "model", "", "Veo model to use")
+	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", "", "Video aspect ratio (16:9 or 9:16)")
+	command.Flags().IntVar(&opts.Duration, "duration", 0, "Duration in seconds; veo-2: 5/6/7/8, veo-3+: 4/6/8")
+	command.Flags().StringVar(&opts.Resolution, "resolution", "", "Video resolution (720p, 1080p, 4k)")
+	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "Local PNG/JPEG image path; repeat for up to 3 (1 = starting frame, 2-3 = reference images)")
+
+	if err := command.MarkFlagRequired("provider"); err != nil {
+		panic(err)
+	}
+	if err := command.MarkFlagRequired("prompt"); err != nil {
+		panic(err)
+	}
+
+	return command
+}
+
 // runVideoGenerate is the canonical implementation for video generation.
-// It validates inputs, sets up signal handling and progress reporting, calls
-// the VideoGenerator, and writes the result as JSON to stdout.
-//
 // Shared by `video generate` and the `gemini veo` shortcut so that both entry
 // points behave identically — the shortcut only pre-fills defaults.
 func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
@@ -201,7 +88,6 @@ func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
 		return fmt.Errorf("video generator is not configured")
 	}
 
-	// Apply provider-specific defaults and validate inputs before any API call.
 	if err := applyVideoDefaults(opts); err != nil {
 		return err
 	}
@@ -213,13 +99,11 @@ func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Catch SIGINT (Ctrl+C) and cancel the context with a user-visible message.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
 		cancel()
-		// Clear the progress line before printing so the message is not garbled.
 		if f.Progress != nil {
 			f.Progress.Clear()
 		}
@@ -227,7 +111,6 @@ func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
 		os.Exit(1)
 	}()
 
-	// Wire progress reporting: update ErrOut on each poll cycle.
 	var progressFn func(string)
 	if f.Progress != nil {
 		progressFn = func(msg string) { f.Progress.Set(msg) }
@@ -253,7 +136,6 @@ func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
 		return err
 	}
 
-	// Clear the progress line before writing JSON to stdout.
 	if f.Progress != nil {
 		f.Progress.Clear()
 	}
@@ -283,7 +165,7 @@ func applyVideoDefaults(opts *videoGenerateOptions) error {
 	return nil
 }
 
-// validDurationsForModel returns the set of accepted duration values (seconds) for a model.
+// validDurationsForModel returns the accepted duration values (seconds) for a model.
 // veo-2 accepts {5,6,7,8}; veo-3+ accepts {4,6,8}.
 func validDurationsForModel(model string) []int {
 	if strings.HasPrefix(model, "veo-2") {
@@ -300,15 +182,13 @@ func validResolutionsForModel(model string) []string {
 		return []string{"720p", "1080p", "4k"}
 	case strings.HasPrefix(model, "veo-3"):
 		return []string{"720p", "1080p"}
-	default: // veo-2
+	default:
 		return []string{"720p"}
 	}
 }
 
 // validateVideoOptions runs client-side validation before submitting any API call.
-// Errors returned here are fast-fail: they prevent wasting quota on a bad request.
 func validateVideoOptions(opts *videoGenerateOptions) error {
-	// Duration must be one of the discrete values the model accepts.
 	validDurations := validDurationsForModel(opts.Model)
 	durationOK := false
 	for _, v := range validDurations {
@@ -325,7 +205,6 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		return fmt.Errorf("duration %d is not valid for model %s (accepted: %s)", opts.Duration, opts.Model, strings.Join(allowed, ", "))
 	}
 
-	// Resolution must be one the model supports.
 	validResolutions := validResolutionsForModel(opts.Model)
 	resolutionOK := false
 	for _, v := range validResolutions {
@@ -338,12 +217,10 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		return fmt.Errorf("resolution %q is not supported by model %s (accepted: %s)", opts.Resolution, opts.Model, strings.Join(validResolutions, ", "))
 	}
 
-	// High-resolution clips require a full 8-second duration.
 	if (opts.Resolution == "1080p" || opts.Resolution == "4k") && opts.Duration != 8 {
 		return fmt.Errorf("resolution %s requires duration=8 (got %d)", opts.Resolution, opts.Duration)
 	}
 
-	// Validate all input images when provided.
 	if len(opts.InputImages) > 3 {
 		return fmt.Errorf("at most 3 input images are supported (got %d)", len(opts.InputImages))
 	}
@@ -353,7 +230,6 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		}
 	}
 
-	// Validate or generate the output path.
 	if opts.Output == "" {
 		opts.Output = defaultVideoOutputPath(opts.Provider)
 	} else {
@@ -365,7 +241,6 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		}
 	}
 
-	// Ensure the output directory is writable.
 	dir := filepath.Dir(opts.Output)
 	if dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -384,7 +259,7 @@ func validateInputImage(path string) error {
 		return fmt.Errorf("input image not found: %s", path)
 	}
 
-	const maxBytes = 20 * 1024 * 1024 // 20 MB — Veo API hard limit
+	const maxBytes = 20 * 1024 * 1024
 	if info.Size() > maxBytes {
 		return fmt.Errorf("input image exceeds the 20 MB limit (got %.1f MB): %s", float64(info.Size())/1024/1024, path)
 	}
@@ -397,8 +272,8 @@ func validateInputImage(path string) error {
 	return nil
 }
 
-// defaultVideoOutputPath returns an auto-generated output file name based on the
-// provider name and current timestamp, following the same pattern as defaultImageOutputPath.
+// defaultVideoOutputPath returns an auto-generated output file name based on
+// the current timestamp.
 func defaultVideoOutputPath(provider string) string {
 	t := time.Now()
 	return fmt.Sprintf("veo_%s_%03d.mp4", t.Format("20060102_150405"), t.Nanosecond()/1e6)

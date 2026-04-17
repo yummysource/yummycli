@@ -41,7 +41,7 @@ func (p *TerminalProgress) Set(message string) {
 		return
 	}
 	// \r moves to the start of the line; the trailing spaces clear leftover chars.
-	fmt.Fprintf(p.out, "\r%-80s", message)
+	_, _ = fmt.Fprintf(p.out, "\r%-80s", message)
 }
 
 // Clear erases the current progress line.
@@ -50,5 +50,5 @@ func (p *TerminalProgress) Clear() {
 	if !p.isTerminal {
 		return
 	}
-	fmt.Fprintf(p.out, "\r%-80s\r", "")
+	_, _ = fmt.Fprintf(p.out, "\r%-80s\r", "")
 }
