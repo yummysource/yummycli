@@ -86,6 +86,37 @@ function download(url, destPath) {
   });
 }
 
+// ── Helpers ── skills ────────────────────────────────────────────────────────
+
+/**
+ * Attempt to update agent skills via the `skills` CLI.
+ * This is best-effort: a missing `skills` binary is not an error.
+ */
+function installSkills() {
+  // Determine whether `skills` is available on PATH before attempting npx,
+  // so we don't silently download an unrelated package.
+  try {
+    execSync("skills --version", { stdio: "ignore" });
+  } catch {
+    console.log(
+      "yummycli: agent skills not updated — run manually:\n" +
+        "  npx skills add yummysource/yummycli -y -g"
+    );
+    return;
+  }
+
+  try {
+    console.log("yummycli: updating agent skills...");
+    execSync("skills add yummysource/yummycli -y -g", { stdio: "inherit" });
+    console.log("yummycli: agent skills updated");
+  } catch {
+    console.log(
+      "yummycli: agent skills update failed — run manually:\n" +
+        "  npx skills add yummysource/yummycli -y -g"
+    );
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -118,6 +149,8 @@ async function main() {
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+
+  installSkills();
 }
 
 main().catch((err) => {
