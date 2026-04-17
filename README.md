@@ -10,16 +10,16 @@
 
 An AI-friendly CLI for multimodal model providers — built for humans and AI Agents.
 
-Supports image generation and editing via [Gemini](https://deepmind.google/technologies/gemini/), with more providers (Claude, OpenAI, Qwen) planned.
+Supports image generation and editing, and video generation via [Gemini](https://deepmind.google/technologies/gemini/), with more providers (Claude, OpenAI, Qwen) planned.
 
-[Install](#installation) · [Auth](#authentication) · [Image Generation](#image-generation) · [Agent Skills](#agent-skills) · [Commands](#command-reference)
+[Install](#installation) · [Auth](#authentication) · [Image Generation](#image-generation) · [Video Generation](#video-generation) · [Agent Skills](#agent-skills) · [Commands](#command-reference)
 
 ---
 
 ## Why yummycli?
 
-- **Agent-Native Design** — Structured [Skills](./skills/) out of the box, designed so AI Agents can call image APIs with zero extra setup
-- **Capability-First Architecture** — `image generate` is the stable automation contract; `gemini nanobanana` is a human-friendly shortcut on top
+- **Agent-Native Design** — Structured [Skills](./skills/) out of the box, designed so AI Agents can call image and video APIs with zero extra setup
+- **Capability-First Architecture** — `image generate` and `video generate` are the stable automation contracts; `gemini nanobanana` and `gemini veo` are human-friendly shortcuts on top
 - **Structured JSON Output** — Every command writes JSON to stdout, making it trivial to pipe into agents, scripts, or other tools
 - **Secure Credential Storage** — API keys stored in the OS-native keychain (macOS Keychain, Linux Secret Service), never in plain text
 - **Provider-Agnostic** — One CLI surface across providers; add a new provider without changing your scripts
@@ -263,6 +263,105 @@ This form is recommended for scripts and AI Agents — it will continue to work 
 
 ---
 
+## Video Generation
+
+yummycli supports video generation via Google Veo, with two equivalent entry points:
+
+| Entry point | Intended for |
+|-------------|-------------|
+| `gemini veo` | Human use — Gemini Veo defaults pre-applied |
+| `video generate --provider gemini` | Automation / scripting — explicit, stable contract |
+
+### Quick start
+
+```bash
+# Step 1: configure Gemini credentials (one-time)
+yummycli gemini init --api-key "AIza..."
+
+# Step 2: generate a video from a text prompt
+yummycli gemini veo --prompt "A golden retriever puppy chasing a red ball in a sunny park"
+```
+
+The generated video is saved to the current directory with an auto-generated filename:
+
+```
+veo_20260417_142301_047.mp4
+```
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--prompt` | Video generation prompt (**required**) | — |
+| `--output` | Output file path (must end in `.mp4`) | auto-generated |
+| `--model` | Veo model | `veo-3.1-fast-generate-preview` |
+| `--aspect-ratio` | Video aspect ratio | `16:9` |
+| `--duration` | Duration in seconds | `8` |
+| `--resolution` | Video resolution | `1080p` |
+| `--input-image` | Input image for image-to-video (repeatable, up to 3) | — |
+
+### Generation modes
+
+`--input-image` can be repeated; the count determines the generation mode automatically:
+
+| `--input-image` count | Mode |
+|-----------------------|------|
+| 0 | Text-to-video |
+| 1 | Image-to-video — image used as the starting frame |
+| 2–3 | Reference-guided — images used as ASSET reference inputs |
+
+```bash
+# Text-to-video
+yummycli gemini veo --prompt "Timelapse of clouds moving over mountain peaks"
+
+# Image-to-video (animate a still image)
+yummycli gemini veo \
+  --prompt "The dog starts running toward the camera" \
+  --input-image ./dog.jpg
+
+# Reference-guided (two images)
+yummycli gemini veo \
+  --prompt "Combine the character with this background environment" \
+  --input-image ./character.png \
+  --input-image ./background.jpg
+```
+
+### Model compatibility
+
+**Duration** accepts only discrete values:
+
+| Model | Valid durations (seconds) |
+|-------|--------------------------|
+| `veo-2.0-generate-001` | 5, 6, 7, 8 |
+| `veo-3.0-*` | 4, 6, 8 |
+| `veo-3.1-*` | 4, 6, 8 |
+
+**Resolution** support per model:
+
+| Model | Supported resolutions |
+|-------|-----------------------|
+| `veo-2.0-generate-001` | `720p` |
+| `veo-3.0-*` | `720p`, `1080p` |
+| `veo-3.1-*` | `720p`, `1080p`, `4k` |
+
+Constraints: `1080p` and `4k` require `--duration 8`. `4k` requires a veo-3.1 model.
+
+### JSON output
+
+```json
+{
+  "provider": "gemini",
+  "output": "veo_20260417_142301_047.mp4",
+  "model": "veo-3.1-fast-generate-preview",
+  "duration_seconds": 8,
+  "aspect_ratio": "16:9",
+  "resolution": "1080p",
+  "elapsed_seconds": 73
+}
+```
+
+---
+
 ## Agent Skills
 
 yummycli ships with Skills — structured instruction files that teach AI Agents how to use the CLI correctly.
@@ -271,6 +370,7 @@ yummycli ships with Skills — structured instruction files that teach AI Agents
 |-------|-------------|
 | [`yummy-shared`](./skills/yummy-shared/SKILL.md) | Credential checks, output contract, and shared safety rules — loaded automatically by all other skills |
 | [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | Text-to-image generation, single-image editing, and multi-image reference editing via Gemini |
+| [`yummy-gen-video`](./skills/yummy-gen-video/SKILL.md) | Text-to-video, image-to-video, and reference-image-guided video generation via Gemini Veo |
 
 Skills are located in [`./skills/`](./skills/).
 
@@ -298,7 +398,25 @@ yummycli
 │
 ├── gemini
 │   ├── init  --api-key                  Initialize Gemini credentials
-│   └── nanobanana                       Generate / edit images with Gemini
+│   ├── nanobanana                       Generate / edit images with Gemini
+│   │     --prompt        (required)
+│   │     --output
+│   │     --model
+│   │     --aspect-ratio
+│   │     --image-size
+│   │     --input-image   (repeatable)
+│   └── veo                              Generate videos with Gemini Veo
+│         --prompt        (required)
+│         --output
+│         --model
+│         --aspect-ratio
+│         --duration
+│         --resolution
+│         --input-image   (repeatable, up to 3)
+│
+├── image
+│   └── generate                         Provider-agnostic image generation
+│         --provider      (required)
 │         --prompt        (required)
 │         --output
 │         --model
@@ -306,15 +424,16 @@ yummycli
 │         --image-size
 │         --input-image   (repeatable)
 │
-└── image
-    └── generate                         Provider-agnostic image generation
+└── video
+    └── generate                         Provider-agnostic video generation
           --provider      (required)
           --prompt        (required)
           --output
           --model
           --aspect-ratio
-          --image-size
-          --input-image   (repeatable)
+          --duration
+          --resolution
+          --input-image   (repeatable, up to 3)
 ```
 
 ---
