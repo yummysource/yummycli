@@ -153,6 +153,7 @@ func dispatchVideoOperation(f *cmdutil.Factory, key string, fvStr map[string]*st
 			AspectRatio: getString("aspect-ratio"),
 			Duration:    getInt("duration"),
 			Resolution:  getString("resolution"),
+			InputImage:  getString("input-image"),
 		}
 		return runVideoGenerate(f, opts)
 
@@ -171,6 +172,9 @@ type videoGenerateOptions struct {
 	AspectRatio string
 	Duration    int
 	Resolution  string
+	// InputImage is an optional path to a local image file used as the starting
+	// frame. When set the request is treated as image-to-video; otherwise text-to-video.
+	InputImage string
 }
 
 // runVideoGenerate is the canonical implementation for video generation.
@@ -224,6 +228,7 @@ func runVideoGenerate(f *cmdutil.Factory, opts *videoGenerateOptions) error {
 		AspectRatio: opts.AspectRatio,
 		Duration:    opts.Duration,
 		Resolution:  opts.Resolution,
+		InputImage:  opts.InputImage,
 		ProgressFn:  progressFn,
 	}
 
@@ -325,6 +330,13 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		return fmt.Errorf("resolution %s requires duration=8 (got %d)", opts.Resolution, opts.Duration)
 	}
 
+	// Validate the input image when provided.
+	if opts.InputImage != "" {
+		if err := validateInputImage(opts.InputImage); err != nil {
+			return err
+		}
+	}
+
 	// Validate or generate the output path.
 	if opts.Output == "" {
 		opts.Output = defaultVideoOutputPath(opts.Provider)
@@ -343,6 +355,27 @@ func validateVideoOptions(opts *videoGenerateOptions) error {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("creating output directory %s: %w", dir, err)
 		}
+	}
+
+	return nil
+}
+
+// validateInputImage checks that the given file exists, is a supported image
+// format (PNG or JPEG), and does not exceed the 20 MB API limit.
+func validateInputImage(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("input image not found: %s", path)
+	}
+
+	const maxBytes = 20 * 1024 * 1024 // 20 MB — Veo API hard limit
+	if info.Size() > maxBytes {
+		return fmt.Errorf("input image exceeds the 20 MB limit (got %.1f MB): %s", float64(info.Size())/1024/1024, path)
+	}
+
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".png" && ext != ".jpg" && ext != ".jpeg" {
+		return fmt.Errorf("input image must be PNG or JPEG (got %q): %s", ext, path)
 	}
 
 	return nil

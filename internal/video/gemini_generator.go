@@ -3,7 +3,9 @@ package video
 import (
 	"context"
 	"fmt"
+	"mime"
 	"os"
+	"path/filepath"
 	"time"
 
 	"google.golang.org/genai"
@@ -66,16 +68,31 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		config.DurationSeconds = &d
 	}
 
-	// Step 1: Submit the job. GenerateVideos returns immediately with an operation
+	// Step 1: Optionally load the input image for image-to-video generation.
+	// When InputImage is set the file is read, MIME type inferred from extension,
+	// and passed as the starting frame. Text-to-video passes nil.
+	var inputImage *genai.Image
+	if req.InputImage != "" {
+		data, err := os.ReadFile(req.InputImage)
+		if err != nil {
+			return nil, fmt.Errorf("reading input image %s: %w", req.InputImage, err)
+		}
+		mimeType := mime.TypeByExtension(filepath.Ext(req.InputImage))
+		if mimeType == "" {
+			mimeType = "image/jpeg" // fallback; Veo accepts JPEG and PNG
+		}
+		inputImage = &genai.Image{ImageBytes: data, MIMEType: mimeType}
+	}
+
+	// Step 2: Submit the job. GenerateVideos returns immediately with an operation
 	// handle — the actual video generation happens asynchronously on Veo's side.
-	// Pass nil for image because Phase 1 is text-to-video only.
 	startTime := time.Now()
-	operation, err := client.Models.GenerateVideos(ctx, req.Model, req.Prompt, nil, config)
+	operation, err := client.Models.GenerateVideos(ctx, req.Model, req.Prompt, inputImage, config)
 	if err != nil {
 		return nil, fmt.Errorf("submitting video generation job: %w", err)
 	}
 
-	// Step 2: Poll until done, honoring the parent context and the 10-minute timeout.
+	// Step 3: Poll until done, honoring the parent context and the 10-minute timeout.
 	// The timeout context ensures the CLI never hangs indefinitely even if the
 	// parent context has no deadline.
 	timeoutCtx, cancel := context.WithTimeout(ctx, generateTimeout)
@@ -108,7 +125,7 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		}
 	}
 
-	// Step 3: Check whether the completed operation succeeded or failed.
+	// Step 4: Check whether the completed operation succeeded or failed.
 	if operation.Error != nil {
 		return nil, fmt.Errorf("video generation failed: %v", operation.Error)
 	}
@@ -116,7 +133,7 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		return nil, fmt.Errorf("video generation completed but no videos were returned")
 	}
 
-	// Step 4: Download the first generated video.
+	// Step 5: Download the first generated video.
 	// Veo returns a hosted URI; the bytes are not included inline in the response.
 	// Files are retained for 48 hours before automatic deletion.
 	gv := operation.Response.GeneratedVideos[0]
@@ -125,7 +142,7 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		return nil, fmt.Errorf("downloading generated video: %w", err)
 	}
 
-	// Step 5: Write the video bytes to the output file.
+	// Step 6: Write the video bytes to the output file.
 	if err := os.WriteFile(req.Output, data, 0o644); err != nil {
 		return nil, fmt.Errorf("writing video to %s: %w", req.Output, err)
 	}
@@ -139,5 +156,6 @@ func (g *GeminiVideoGenerator) GenerateVideo(ctx context.Context, req GenerateVi
 		AspectRatio:     req.AspectRatio,
 		Resolution:      req.Resolution,
 		ElapsedSeconds:  elapsed,
+		InputImage:      req.InputImage,
 	}, nil
 }

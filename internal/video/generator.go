@@ -46,6 +46,11 @@ type GenerateVideoRequest struct {
 	// 1080p requires Duration == 8.
 	Resolution string
 
+	// InputImage is an optional path to a local image file (PNG or JPEG) used as
+	// the starting frame for image-to-video generation. When empty the request is
+	// treated as text-to-video.
+	InputImage string
+
 	// ProgressFn is an optional callback invoked during polling with a status
 	// message such as "Generating video... 45s elapsed". A nil value is safe.
 	// Using a callback rather than an interface avoids circular package imports
@@ -76,4 +81,8 @@ type GenerateVideoResult struct {
 
 	// ElapsedSeconds is the wall-clock time from submission to file written.
 	ElapsedSeconds int `json:"elapsed_seconds"`
+
+	// InputImage is the path of the input image used as the starting frame, or
+	// empty for text-to-video requests.
+	InputImage string `json:"input_image,omitempty"`
 }

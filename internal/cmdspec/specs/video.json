@@ -47,6 +47,11 @@
           "enum": ["720p", "1080p", "4k"]
         },
         {
+          "name": "input-image",
+          "type": "string",
+          "usage": "Path to a local PNG or JPEG image used as the starting frame (image-to-video)"
+        },
+        {
           "name": "provider",
           "type": "string",
           "default": "gemini",

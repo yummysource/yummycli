@@ -120,6 +120,7 @@ func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "Video aspect ratio (16:9 or 9:16)")
 	command.Flags().IntVar(&opts.Duration, "duration", opts.Duration, "Duration in seconds; veo-2: 5/6/7/8, veo-3+: 4/6/8")
 	command.Flags().StringVar(&opts.Resolution, "resolution", opts.Resolution, "Video resolution (720p, 1080p, 4k; veo-3.1 only for 4k)")
+	command.Flags().StringVar(&opts.InputImage, "input-image", "", "Local PNG or JPEG image to use as starting frame (image-to-video)")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)
