@@ -28,6 +28,12 @@ dist/
 bin/
 artifacts/
 
+# Generated media files (yummycli output)
+*.mp4
+*.png
+*.jpg
+*.jpeg
+
 # Temp files
 .DS_Store
 tmp/
