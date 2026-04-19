@@ -3,6 +3,18 @@
   "version": "0.1.2",
   "description": "AI-friendly CLI for multimodal model providers (Gemini, and more)",
   "license": "MIT",
+  "keywords": [
+    "cli",
+    "ai",
+    "gemini",
+    "veo",
+    "image-generation",
+    "video-generation",
+    "multimodal",
+    "agent",
+    "llm",
+    "google-ai"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yummysource/yummycli.git"
