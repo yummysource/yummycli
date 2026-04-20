@@ -10,16 +10,16 @@
 
 An AI-friendly CLI for multimodal model providers — built for humans and AI Agents.
 
-Supports image generation and editing, and video generation via [Gemini](https://deepmind.google/technologies/gemini/), with more providers (Claude, OpenAI, Qwen) planned.
+Supports image generation and editing, video generation, and text-to-speech synthesis via [Gemini](https://deepmind.google/technologies/gemini/), with more providers (Claude, OpenAI, Qwen) planned.
 
-[Install](#installation) · [Auth](#authentication) · [Image Generation](#image-generation) · [Video Generation](#video-generation) · [Agent Skills](#agent-skills) · [Commands](#command-reference)
+[Install](#installation) · [Auth](#authentication) · [Image Generation](#image-generation) · [Video Generation](#video-generation) · [Voice Generation](#voice-generation) · [Agent Skills](#agent-skills) · [Commands](#command-reference)
 
 ---
 
 ## Why yummycli?
 
-- **Agent-Native Design** — Structured [Skills](./skills/) out of the box, designed so AI Agents can call image and video APIs with zero extra setup
-- **Capability-First Architecture** — `image generate` and `video generate` are the stable automation contracts; `gemini nanobanana` and `gemini veo` are human-friendly shortcuts on top
+- **Agent-Native Design** — Structured [Skills](./skills/) out of the box, designed so AI Agents can call image, video, and audio APIs with zero extra setup
+- **Capability-First Architecture** — `image generate`, `video generate`, and `audio speak` are the stable automation contracts; `gemini nanobanana`, `gemini veo`, and `gemini speak` are human-friendly shortcuts on top
 - **Structured JSON Output** — Every command writes JSON to stdout, making it trivial to pipe into agents, scripts, or other tools
 - **Secure Credential Storage** — API keys stored in the OS-native keychain (macOS Keychain, Linux Secret Service), never in plain text
 - **Provider-Agnostic** — One CLI surface across providers; add a new provider without changing your scripts
@@ -362,6 +362,110 @@ Constraints: `1080p` and `4k` require `--duration 8`. `4k` requires a veo-3.1 mo
 
 ---
 
+## Voice Generation
+
+yummycli supports text-to-speech synthesis via Google Gemini TTS, with two equivalent entry points:
+
+| Entry point | Intended for |
+|-------------|-------------|
+| `gemini speak` | Human use — Gemini TTS defaults pre-applied |
+| `audio speak --provider gemini` | Automation / scripting — explicit, stable contract |
+
+### Quick start
+
+```bash
+# Generate speech from text (saves to auto-generated .wav file)
+yummycli gemini speak --text "A golden retriever is the best dog in the world."
+
+# Specify voice and output path
+yummycli gemini speak \
+  --text "Welcome to the future of AI-powered audio." \
+  --voice Puck \
+  --output welcome.wav
+```
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--text` | Text to synthesise (**required**) | — |
+| `--output` | Output file path (must end in `.wav`) | auto-generated |
+| `--model` | TTS model | `gemini-3.1-flash-tts-preview` |
+| `--voice` | Prebuilt voice name | `Aoede` |
+| `--language` | BCP-47 language code (auto-detected if omitted) | — |
+| `--speaker` | Multi-speaker mapping `Name:Voice` (repeatable, up to 2) | — |
+
+`--voice` and `--speaker` are mutually exclusive.
+
+### Single-speaker synthesis
+
+```bash
+# Default voice (Aoede, Breezy)
+yummycli gemini speak --text "Hello, world!"
+
+# Upbeat voice with explicit output path
+yummycli gemini speak \
+  --text "This is an exciting announcement!" \
+  --voice Puck \
+  --output announcement.wav
+
+# Explicit language code
+yummycli gemini speak \
+  --text "你好，欢迎使用语音合成服务。" \
+  --voice Aoede \
+  --language zh-CN \
+  --output greeting.wav
+```
+
+### Multi-speaker dialogue
+
+Tag each speaker's lines with `[Name]:` in the text, then map each name to a voice with `--speaker`:
+
+```bash
+yummycli gemini speak \
+  --text "[Alice]: Hello! Nice to meet you. [Bob]: Hi Alice, great to meet you too!" \
+  --speaker Alice:Aoede \
+  --speaker Bob:Kore \
+  --output dialogue.wav
+```
+
+### List available voices
+
+```bash
+yummycli gemini voices
+```
+
+Returns a JSON array of all 30 prebuilt voices with their style descriptions.
+
+### JSON output
+
+```json
+{
+  "provider": "gemini",
+  "output": "tts_20260420_142301_047.wav",
+  "model": "gemini-3.1-flash-tts-preview",
+  "voice": "Aoede",
+  "elapsed_seconds": 3
+}
+```
+
+For multi-speaker requests, `voice` is replaced by `speakers`:
+
+```json
+{
+  "provider": "gemini",
+  "output": "dialogue_20260420_143010_112.wav",
+  "model": "gemini-3.1-flash-tts-preview",
+  "speakers": [
+    {"name": "Alice", "voice": "Aoede"},
+    {"name": "Bob", "voice": "Kore"}
+  ],
+  "elapsed_seconds": 4
+}
+```
+
+---
+
 ## Agent Skills
 
 yummycli ships with Skills — structured instruction files that teach AI Agents how to use the CLI correctly.
@@ -371,6 +475,7 @@ yummycli ships with Skills — structured instruction files that teach AI Agents
 | [`yummy-shared`](./skills/yummy-shared/SKILL.md) | Credential checks, output contract, and shared safety rules — loaded automatically by all other skills |
 | [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | Text-to-image generation, single-image editing, and multi-image reference editing via Gemini |
 | [`yummy-gen-video`](./skills/yummy-gen-video/SKILL.md) | Text-to-video, image-to-video, and reference-image-guided video generation via Gemini Veo |
+| [`yummy-gen-voice`](./skills/yummy-gen-voice/SKILL.md) | Single-speaker TTS, multi-speaker dialogue synthesis, and voice listing via Gemini TTS |
 
 Skills are located in [`./skills/`](./skills/).
 
@@ -405,14 +510,22 @@ yummycli
 │   │     --aspect-ratio
 │   │     --image-size
 │   │     --input-image   (repeatable)
-│   └── veo                              Generate videos with Gemini Veo
-│         --prompt        (required)
-│         --output
-│         --model
-│         --aspect-ratio
-│         --duration
-│         --resolution
-│         --input-image   (repeatable, up to 3)
+│   ├── veo                              Generate videos with Gemini Veo
+│   │     --prompt        (required)
+│   │     --output
+│   │     --model
+│   │     --aspect-ratio
+│   │     --duration
+│   │     --resolution
+│   │     --input-image   (repeatable, up to 3)
+│   ├── speak                            Synthesise speech with Gemini TTS
+│   │     --text          (required)
+│   │     --output
+│   │     --model
+│   │     --voice
+│   │     --language
+│   │     --speaker       (repeatable, up to 2; mutually exclusive with --voice)
+│   └── voices                           List available Gemini TTS voices
 │
 ├── image
 │   └── generate                         Provider-agnostic image generation
@@ -424,16 +537,28 @@ yummycli
 │         --image-size
 │         --input-image   (repeatable)
 │
-└── video
-    └── generate                         Provider-agnostic video generation
+├── video
+│   └── generate                         Provider-agnostic video generation
+│         --provider      (required)
+│         --prompt        (required)
+│         --output
+│         --model
+│         --aspect-ratio
+│         --duration
+│         --resolution
+│         --input-image   (repeatable, up to 3)
+│
+└── audio
+    ├── speak                            Provider-agnostic speech synthesis
+    │     --provider      (required)
+    │     --text          (required)
+    │     --output
+    │     --model
+    │     --voice
+    │     --language
+    │     --speaker       (repeatable, up to 2; mutually exclusive with --voice)
+    └── voices                           List available voices for a provider
           --provider      (required)
-          --prompt        (required)
-          --output
-          --model
-          --aspect-ratio
-          --duration
-          --resolution
-          --input-image   (repeatable, up to 3)
 ```
 
 ---
