@@ -50,6 +50,7 @@ func NewRootCommand(f *cmdutil.Factory) *cobra.Command {
 		NewCmdGemini(f),
 		NewCmdImage(f),
 		NewCmdVideo(f),
+		NewCmdAudio(f),
 		NewCmdAuth(f),
 	)
 

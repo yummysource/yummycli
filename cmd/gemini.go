@@ -25,6 +25,8 @@ func NewCmdGemini(f *cmdutil.Factory) *cobra.Command {
 		newCmdGeminiInit(f),
 		newCmdGeminiNanoBanana(f),
 		newCmdGeminiVeo(f),
+		newCmdGeminiSpeak(f),
+		newCmdGeminiVoices(f),
 	)
 
 	return command
@@ -127,6 +129,53 @@ func newCmdGeminiVeo(f *cmdutil.Factory) *cobra.Command {
 	}
 
 	return command
+}
+
+// newCmdGeminiSpeak is a provider shortcut for speech synthesis with Gemini TTS,
+// equivalent to `audio speak --provider gemini` with Gemini-specific defaults pre-filled.
+func newCmdGeminiSpeak(f *cmdutil.Factory) *cobra.Command {
+	opts := &audioSpeakOptions{
+		Provider: providers.Gemini,
+	}
+
+	command := &cobra.Command{
+		Use:   "speak",
+		Short: "Synthesise text to speech with Gemini TTS",
+		Annotations: map[string]string{
+			"canonical": "audio speak --provider " + providers.Gemini,
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAudioSpeak(f, opts)
+		},
+	}
+
+	command.Flags().StringVar(&opts.Text, "text", "", "Text to synthesise")
+	command.Flags().StringVar(&opts.Output, "output", "", "Output WAV file path (auto-generated if omitted)")
+	command.Flags().StringVar(&opts.Model, "model", "", "TTS model to use")
+	command.Flags().StringVar(&opts.Voice, "voice", "", "Prebuilt voice name (e.g. Aoede); mutually exclusive with --speaker")
+	command.Flags().StringVar(&opts.LanguageCode, "language", "", "BCP-47 language code (auto-detected from text if omitted)")
+	command.Flags().StringArrayVar(&opts.Speakers, "speaker", nil, "Multi-speaker mapping Name:Voice; repeat up to 2 (e.g. --speaker Alice:Aoede)")
+
+	if err := command.MarkFlagRequired("text"); err != nil {
+		panic(err)
+	}
+
+	return command
+}
+
+// newCmdGeminiVoices is a provider shortcut for listing Gemini TTS voices,
+// equivalent to `audio voices --provider gemini`.
+func newCmdGeminiVoices(f *cmdutil.Factory) *cobra.Command {
+	return &cobra.Command{
+		Use:   "voices",
+		Short: "List available Gemini TTS voices",
+		Annotations: map[string]string{
+			"canonical": "audio voices --provider " + providers.Gemini,
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAudioVoices(f, providers.Gemini)
+		},
+	}
 }
 
 // validateAspectRatio checks whether the given aspect ratio is supported by the specified Gemini model.

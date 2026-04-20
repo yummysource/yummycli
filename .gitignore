@@ -33,6 +33,7 @@ artifacts/
 *.png
 *.jpg
 *.jpeg
+*.wav
 
 # Temp files
 .DS_Store

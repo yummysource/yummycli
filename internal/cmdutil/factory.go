@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	internalaudio "github.com/yummysource/yummycli/internal/audio"
 	"github.com/yummysource/yummycli/internal/auth"
 	internalimage "github.com/yummysource/yummycli/internal/image"
 	"github.com/yummysource/yummycli/internal/output"
@@ -22,6 +23,9 @@ type Factory struct {
 
 	// VideoGenerator generates videos; injected so commands are testable.
 	VideoGenerator internalvideo.VideoGenerator
+
+	// Speaker synthesises text to speech; injected so commands are testable.
+	Speaker internalaudio.Speaker
 
 	// Output writes structured results (JSON) to stdout.
 	Output *output.Writer

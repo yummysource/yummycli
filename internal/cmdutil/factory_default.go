@@ -3,6 +3,7 @@ package cmdutil
 import (
 	"os"
 
+	"github.com/yummysource/yummycli/internal/audio"
 	"github.com/yummysource/yummycli/internal/auth"
 	"github.com/yummysource/yummycli/internal/image"
 	"github.com/yummysource/yummycli/internal/output"
@@ -29,6 +30,7 @@ func NewDefault() *Factory {
 		CredentialStore: credentialStore,
 		ImageGenerator:  image.NewGeminiGenerator(credentialStore),
 		VideoGenerator:  video.NewGeminiGenerator(credentialStore),
+		Speaker:         audio.NewGeminiSpeaker(credentialStore),
 		Output:          output.New(streams.Out),
 		Progress:        NewProgress(streams.ErrOut, isTerminal),
 	}
