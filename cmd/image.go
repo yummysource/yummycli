@@ -126,6 +126,9 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		if opts.Model == "" {
 			opts.Model = openAIDefaultModel
 		}
+		if opts.Model != openAIDefaultModel {
+			return fmt.Errorf("unsupported openai model: %s (only dall-e-3 is supported)", opts.Model)
+		}
 		if opts.ImageSize == "" {
 			opts.ImageSize = "1024x1024"
 		}

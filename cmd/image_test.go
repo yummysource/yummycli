@@ -56,8 +56,14 @@ func TestImageGenerateReturnsErrorWhenNoDefaultAndNoProviderFlag(t *testing.T) {
 	cmd := NewCmdImage(f)
 	cmd.SetArgs([]string{"generate", "--prompt", "a cat", "--output", "out.png"})
 
-	if err := cmd.Execute(); err == nil {
+	err := cmd.Execute()
+	if err == nil {
 		t.Fatal("expected error when no provider configured")
+	}
+
+	want := "no provider specified and no default configured; run: yummycli init --provider <name> --api-key <key> --default"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
 
@@ -343,6 +349,30 @@ func TestImageGenerateRejectsUnsupportedOpenAISize(t *testing.T) {
 		t.Fatal("expected error for unsupported openai size")
 	}
 	want := "unsupported image size for openai: 512x512"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestImageGenerateRejectsUnsupportedOpenAIModel(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	f := newImageGenerateFactory(stdout, stderr, &fakeImageGenerator{})
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.OpenAI,
+		"--prompt", "a cat",
+		"--output", "out.png",
+		"--model", "dall-e-2",
+	})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for unsupported openai model")
+	}
+	want := "unsupported openai model: dall-e-2 (only dall-e-3 is supported)"
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
