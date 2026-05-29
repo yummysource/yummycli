@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/yummysource/yummycli/internal/cmdutil"
+	"github.com/yummysource/yummycli/internal/providers"
 )
 
 type initOptions struct {
@@ -53,18 +54,23 @@ func runInit(f *cmdutil.Factory, opts *initOptions) error {
 		return fmt.Errorf("output writer is not configured")
 	}
 
-	if err := f.CredentialStore.SaveAPIKey(opts.Provider, opts.APIKey); err != nil {
+	normalized, err := providers.Normalize(opts.Provider)
+	if err != nil {
+		return err
+	}
+
+	if err := f.CredentialStore.SaveAPIKey(normalized, opts.APIKey); err != nil {
 		return err
 	}
 
 	if opts.Default {
-		if err := f.CredentialStore.SetDefaultProvider(opts.Provider); err != nil {
+		if err := f.CredentialStore.SetDefaultProvider(normalized); err != nil {
 			return err
 		}
 	}
 
 	return f.Output.JSON(initResult{
-		Provider:   opts.Provider,
+		Provider:   normalized,
 		Configured: true,
 		Default:    opts.Default,
 	})
