@@ -172,7 +172,7 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 	return f.Output.JSON(result)
 }
 
-const openAIDefaultModel = "gpt-image-1"
+const openAIDefaultModel = "gpt-image-2"
 
 // validateOpenAISize checks that the size is a known OpenAI image size.
 func validateOpenAISize(size string) error {

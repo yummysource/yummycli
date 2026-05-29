@@ -189,8 +189,8 @@ func TestGeminiNanoBananaUsesDefaultModelWhenGenerating(t *testing.T) {
 	if generator.req.Output != "./result.png" {
 		t.Fatalf("output = %q, want %q", generator.req.Output, "./result.png")
 	}
-	if generator.req.Model != "gemini-3.1-flash-image-preview" {
-		t.Fatalf("model = %q, want %q", generator.req.Model, "gemini-3.1-flash-image-preview")
+	if generator.req.Model != "gemini-3.1-flash-image" {
+		t.Fatalf("model = %q, want %q", generator.req.Model, "gemini-3.1-flash-image")
 	}
 }
 
@@ -541,7 +541,7 @@ func TestGeminiNanoBananaWritesJSONResultOnSuccess(t *testing.T) {
 	}
 
 	got := stdout.String()
-	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410123456_789.png\",\"model\":\"gemini-3.1-flash-image-preview\",\"inputImageCount\":2}\n"
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410123456_789.png\",\"model\":\"gemini-3.1-flash-image\",\"inputImageCount\":2}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
@@ -583,7 +583,7 @@ func TestGeminiNanoBananaWritesZeroInputImageCountForTextOnlyGeneration(t *testi
 	}
 
 	got := stdout.String()
-	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410080910_110.png\",\"model\":\"gemini-3.1-flash-image-preview\",\"inputImageCount\":0}\n"
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410080910_110.png\",\"model\":\"gemini-3.1-flash-image\",\"inputImageCount\":0}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}

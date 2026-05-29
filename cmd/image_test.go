@@ -293,7 +293,7 @@ func TestImageGenerateWritesJSONResultOnSuccess(t *testing.T) {
 	}
 
 	got := stdout.String()
-	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260409102030_456.png\",\"model\":\"gemini-3.1-flash-image-preview\",\"inputImageCount\":1}\n"
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260409102030_456.png\",\"model\":\"gemini-3.1-flash-image\",\"inputImageCount\":1}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}

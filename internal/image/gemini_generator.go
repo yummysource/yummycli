@@ -25,7 +25,7 @@ func NewGeminiGenerator(credentialStore *auth.ProviderCredentialStore) *GeminiGe
 	}
 }
 
-const geminiDefaultModelFallback = "gemini-3.1-flash-image-preview"
+const geminiDefaultModelFallback = "gemini-3.1-flash-image"
 
 // GenerateImage generates an image and writes it to the requested output path.
 func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) error {

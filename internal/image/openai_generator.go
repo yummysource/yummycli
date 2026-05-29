@@ -15,7 +15,7 @@ import (
 )
 
 const defaultOpenAIImagesURL = "https://api.openai.com/v1/images/generations"
-const openAIDefaultModelFallback = "gpt-image-1"
+const openAIDefaultModelFallback = "gpt-image-2"
 
 // OpenAIGenerator generates images with the OpenAI DALL-E API.
 type OpenAIGenerator struct {

@@ -12,7 +12,7 @@ import (
 )
 
 // geminiDefaultModel is the default image generation model for gemini nanobanana.
-const geminiDefaultModel = "gemini-3.1-flash-image-preview"
+const geminiDefaultModel = "gemini-3.1-flash-image"
 
 // NewCmdGemini creates the Gemini provider shortcut command group.
 func NewCmdGemini(f *cmdutil.Factory) *cobra.Command {
@@ -191,7 +191,7 @@ func validateAspectRatio(model, aspectRatio string) error {
 
 	var allowed []string
 	switch model {
-	case "gemini-3.1-flash-image-preview":
+	case "gemini-3.1-flash-image":
 		allowed = aspectRatioGemini31FlashImagePreview
 	case "gemini-3-pro-image-preview":
 		allowed = aspectRatioGemini3ProImagePreview
@@ -223,7 +223,7 @@ func validateImageSize(model, imageSize string) (string, error) {
 
 	var allowed []string
 	switch model {
-	case "gemini-3.1-flash-image-preview":
+	case "gemini-3.1-flash-image":
 		allowed = resolutionGemini31FlashImagePreview
 	case "gemini-3-pro-image-preview":
 		allowed = resolutionGemini3ProImagePreview

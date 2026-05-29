@@ -51,7 +51,7 @@ All `yummycli` generation commands return JSON on stdout. Read the response and 
 {
   "provider": "gemini",
   "output": "gemini_20260410123456_789.png",
-  "model": "gemini-3.1-flash-image-preview",
+  "model": "gemini-3.1-flash-image",
   "inputImageCount": 2
 }
 ```

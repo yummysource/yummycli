@@ -61,7 +61,7 @@ yummycli image generate \
 ## Provider-Specific Defaults
 
 **Gemini** (when gemini is the active provider):
-- Model: `gemini-3.1-flash-image-preview`
+- Model: `gemini-3.1-flash-image`
 - Aspect ratio: `16:9`
 - Image size: `1K`
 
@@ -74,7 +74,7 @@ yummycli image generate \
 ## Model Selection (Gemini)
 
 - User says `gemini pro` or `pro` → `--model gemini-3-pro-image-preview`
-- User says `gemini flash` or `flash` → `--model gemini-3.1-flash-image-preview`
+- User says `gemini flash` or `flash` → `--model gemini-3.1-flash-image`
 - No explicit model request → omit `--model` and let yummycli use its default
 
 ## Intent to Parameters
