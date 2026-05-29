@@ -3,7 +3,6 @@ package image
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,10 +45,9 @@ func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 	}
 
 	body := map[string]any{
-		"model":           req.Model,
-		"prompt":          req.Prompt,
-		"n":               1,
-		"response_format": "b64_json",
+		"model":  req.Model,
+		"prompt": req.Prompt,
+		"n":      1,
 	}
 	if req.ImageSize != "" {
 		body["size"] = req.ImageSize
@@ -86,20 +84,35 @@ func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 
 	var result struct {
 		Data []struct {
-			B64JSON string `json:"b64_json"`
+			URL string `json:"url"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return err
 	}
-	if len(result.Data) == 0 || result.Data[0].B64JSON == "" {
-		return fmt.Errorf("no image data returned")
+	if len(result.Data) == 0 || result.Data[0].URL == "" {
+		return fmt.Errorf("no image url returned")
 	}
 
-	imgBytes, err := base64.StdEncoding.DecodeString(result.Data[0].B64JSON)
+	return downloadURL(ctx, result.Data[0].URL, req.Output)
+}
+
+func downloadURL(ctx context.Context, url, output string) error {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
-
-	return os.WriteFile(req.Output, imgBytes, 0o644)
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download image: status %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(output, data, 0o644)
 }

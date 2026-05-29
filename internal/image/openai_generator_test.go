@@ -2,7 +2,6 @@ package image
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -41,15 +40,25 @@ func (s *memorySecretStore) Delete(service, account string) error {
 	return nil
 }
 
-func newOpenAITestServer(t *testing.T, b64Image string) *httptest.Server {
+// newOpenAITestServer returns a test server that serves:
+//   - POST /  → JSON with a url pointing back to the server's /image path
+//   - GET /image → the provided imageData bytes
+func newOpenAITestServer(t *testing.T, imageData []byte) *httptest.Server {
 	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "image/png")
+			w.Write(imageData)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		resp := map[string]any{
-			"data": []map[string]string{{"b64_json": b64Image}},
+			"data": []map[string]string{{"url": srv.URL + "/image"}},
 		}
 		json.NewEncoder(w).Encode(resp)
 	}))
+	return srv
 }
 
 func TestOpenAIGeneratorRejectsNonOpenAIProvider(t *testing.T) {
@@ -69,8 +78,7 @@ func TestOpenAIGeneratorRejectsNonOpenAIProvider(t *testing.T) {
 
 func TestOpenAIGeneratorWritesImageFile(t *testing.T) {
 	fakeBytes := []byte("fake-image-data")
-	b64 := base64.StdEncoding.EncodeToString(fakeBytes)
-	srv := newOpenAITestServer(t, b64)
+	srv := newOpenAITestServer(t, fakeBytes)
 	defer srv.Close()
 
 	secretStore := newMemorySecretStore()

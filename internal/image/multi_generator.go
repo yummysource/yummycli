@@ -50,8 +50,14 @@ func (m *MultiGenerator) GenerateImage(ctx context.Context, req GenerateImageReq
 
 	fmt.Fprintf(m.errLog, "primary provider %s failed (%v), retrying with %s\n", req.Provider, err, req.Fallback)
 
+	// Clear all provider-specific fields so the fallback uses its own defaults.
 	fallbackReq := req
 	fallbackReq.Provider = req.Fallback
 	fallbackReq.Fallback = ""
+	fallbackReq.Model = ""
+	fallbackReq.ImageSize = ""
+	fallbackReq.AspectRatio = ""
+	fallbackReq.Quality = ""
+	fallbackReq.Style = ""
 	return fallbackGen.GenerateImage(ctx, fallbackReq)
 }
