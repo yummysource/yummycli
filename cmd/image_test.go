@@ -322,12 +322,6 @@ func TestImageGenerateDefaultsForOpenAI(t *testing.T) {
 	if generator.req.ImageSize != "1024x1024" {
 		t.Fatalf("image size = %q, want %q", generator.req.ImageSize, "1024x1024")
 	}
-	if generator.req.Quality != "standard" {
-		t.Fatalf("quality = %q, want %q", generator.req.Quality, "standard")
-	}
-	if generator.req.Style != "vivid" {
-		t.Fatalf("style = %q, want %q", generator.req.Style, "vivid")
-	}
 }
 
 func TestImageGenerateRejectsUnsupportedOpenAISize(t *testing.T) {
@@ -354,10 +348,11 @@ func TestImageGenerateRejectsUnsupportedOpenAISize(t *testing.T) {
 	}
 }
 
-func TestImageGenerateRejectsUnsupportedOpenAIModel(t *testing.T) {
+func TestImageGeneratePassesExplicitOpenAIModel(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	f := newImageGenerateFactory(stdout, stderr, &fakeImageGenerator{})
+	generator := &fakeImageGenerator{}
+	f := newImageGenerateFactory(stdout, stderr, generator)
 
 	cmd := NewCmdImage(f)
 	cmd.SetArgs([]string{
@@ -365,15 +360,13 @@ func TestImageGenerateRejectsUnsupportedOpenAIModel(t *testing.T) {
 		"--provider", providers.OpenAI,
 		"--prompt", "a cat",
 		"--output", "out.png",
-		"--model", "dall-e-2",
+		"--model", "dall-e-3",
 	})
 
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error for unsupported openai model")
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
 	}
-	want := "unsupported openai model: dall-e-2 (only dall-e-3 is supported)"
-	if err.Error() != want {
-		t.Fatalf("error = %q, want %q", err.Error(), want)
+	if generator.req.Model != "dall-e-3" {
+		t.Fatalf("model = %q, want dall-e-3", generator.req.Model)
 	}
 }

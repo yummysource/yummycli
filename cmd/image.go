@@ -126,17 +126,8 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		if opts.Model == "" {
 			opts.Model = openAIDefaultModel
 		}
-		if opts.Model != openAIDefaultModel {
-			return fmt.Errorf("unsupported openai model: %s (only dall-e-3 is supported)", opts.Model)
-		}
 		if opts.ImageSize == "" {
 			opts.ImageSize = "1024x1024"
-		}
-		if opts.Quality == "" {
-			opts.Quality = "standard"
-		}
-		if opts.Style == "" {
-			opts.Style = "vivid"
 		}
 		if err := validateOpenAISize(opts.ImageSize); err != nil {
 			return err
@@ -181,11 +172,16 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 	return f.Output.JSON(result)
 }
 
-const openAIDefaultModel = "dall-e-3"
+const openAIDefaultModel = "gpt-image-1"
 
-// validateOpenAISize checks that the size is valid for dall-e-3.
+// validateOpenAISize checks that the size is a known OpenAI image size.
 func validateOpenAISize(size string) error {
-	valid := []string{"1024x1024", "1024x1792", "1792x1024"}
+	valid := []string{
+		"1024x1024",           // gpt-image-1 and dall-e-3
+		"1536x1024",           // gpt-image-1 landscape
+		"1024x1536",           // gpt-image-1 portrait
+		"1024x1792", "1792x1024", // dall-e-3
+	}
 	for _, v := range valid {
 		if v == size {
 			return nil

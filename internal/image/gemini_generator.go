@@ -25,10 +25,16 @@ func NewGeminiGenerator(credentialStore *auth.ProviderCredentialStore) *GeminiGe
 	}
 }
 
+const geminiDefaultModelFallback = "gemini-3.1-flash-image-preview"
+
 // GenerateImage generates an image and writes it to the requested output path.
 func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) error {
 	if req.Provider != providers.Gemini {
 		return fmt.Errorf("unsupported provider: %s", req.Provider)
+	}
+
+	if req.Model == "" {
+		req.Model = geminiDefaultModelFallback
 	}
 
 	apiKey, err := g.credentialStore.GetAPIKey(req.Provider)

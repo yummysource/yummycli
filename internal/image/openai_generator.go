@@ -3,6 +3,7 @@ package image
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 )
 
 const defaultOpenAIImagesURL = "https://api.openai.com/v1/images/generations"
+const openAIDefaultModelFallback = "gpt-image-1"
 
 // OpenAIGenerator generates images with the OpenAI DALL-E API.
 type OpenAIGenerator struct {
@@ -39,6 +41,10 @@ func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 		return fmt.Errorf("unsupported provider: %s", req.Provider)
 	}
 
+	if req.Model == "" {
+		req.Model = openAIDefaultModelFallback
+	}
+
 	apiKey, err := g.credentialStore.GetAPIKey(req.Provider)
 	if err != nil {
 		return err
@@ -54,9 +60,6 @@ func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 	}
 	if req.Quality != "" {
 		body["quality"] = req.Quality
-	}
-	if req.Style != "" {
-		body["style"] = req.Style
 	}
 
 	bodyBytes, err := json.Marshal(body)
@@ -84,17 +87,29 @@ func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 
 	var result struct {
 		Data []struct {
-			URL string `json:"url"`
+			URL     string `json:"url"`
+			B64JSON string `json:"b64_json"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return err
 	}
-	if len(result.Data) == 0 || result.Data[0].URL == "" {
-		return fmt.Errorf("no image url returned")
+	if len(result.Data) == 0 {
+		return fmt.Errorf("no image data returned")
 	}
 
-	return downloadURL(ctx, result.Data[0].URL, req.Output)
+	d := result.Data[0]
+	if d.URL != "" {
+		return downloadURL(ctx, d.URL, req.Output)
+	}
+	if d.B64JSON != "" {
+		imgBytes, err := base64.StdEncoding.DecodeString(d.B64JSON)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(req.Output, imgBytes, 0o644)
+	}
+	return fmt.Errorf("no image data returned")
 }
 
 func downloadURL(ctx context.Context, url, output string) error {
