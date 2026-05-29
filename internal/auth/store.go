@@ -142,7 +142,11 @@ const configDefaultProviderAccount = "config:default_provider"
 
 // SetDefaultProvider persists the default provider name.
 func (s *ProviderCredentialStore) SetDefaultProvider(provider string) error {
-	return s.store.Set(secretServiceName, configDefaultProviderAccount, provider)
+	normalized, err := providers.Normalize(provider)
+	if err != nil {
+		return err
+	}
+	return s.store.Set(secretServiceName, configDefaultProviderAccount, normalized)
 }
 
 // GetDefaultProvider returns the configured default provider, or "" if not set.

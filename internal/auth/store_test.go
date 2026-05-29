@@ -205,3 +205,12 @@ func TestGetDefaultProviderReturnsEmptyWhenNotSet(t *testing.T) {
 		t.Fatalf("got %q, want empty string", got)
 	}
 }
+
+func TestSetDefaultProviderRejectsUnsupportedProvider(t *testing.T) {
+	store := NewProviderCredentialStore(newMemorySecretStore())
+
+	err := store.SetDefaultProvider("qwen")
+	if err == nil {
+		t.Fatal("SetDefaultProvider returned nil error for unsupported provider")
+	}
+}
