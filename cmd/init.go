@@ -46,6 +46,9 @@ func NewCmdInit(f *cmdutil.Factory) *cobra.Command {
 }
 
 func runInit(f *cmdutil.Factory, opts *initOptions) error {
+	if f.CredentialStore == nil {
+		return fmt.Errorf("credential store is not configured")
+	}
 	if f.Output == nil {
 		return fmt.Errorf("output writer is not configured")
 	}
