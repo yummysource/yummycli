@@ -9,8 +9,12 @@ import (
 // Gemini identifies the Gemini provider.
 const Gemini = "gemini"
 
+// OpenAI identifies the OpenAI provider.
+const OpenAI = "openai"
+
 var supported = map[string]struct{}{
 	Gemini: {},
+	OpenAI: {},
 }
 
 // All returns the names of all registered providers in sorted order.

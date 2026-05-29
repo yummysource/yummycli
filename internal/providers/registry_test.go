@@ -59,3 +59,23 @@ func TestNormalizeReturnsOriginalUnsupportedProviderNameInError(t *testing.T) {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
+
+func TestNormalizeOpenAI(t *testing.T) {
+	got, err := Normalize("openai")
+	if err != nil {
+		t.Fatalf("Normalize returned error: %v", err)
+	}
+	if got != OpenAI {
+		t.Fatalf("got %q, want %q", got, OpenAI)
+	}
+}
+
+func TestAllIncludesOpenAI(t *testing.T) {
+	all := All()
+	for _, p := range all {
+		if p == OpenAI {
+			return
+		}
+	}
+	t.Fatalf("All() does not include %q", OpenAI)
+}
