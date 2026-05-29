@@ -28,22 +28,36 @@ func newImageGenerateFactory(stdout, stderr *bytes.Buffer, generator *fakeImageG
 	return f
 }
 
-func TestImageGenerateRequiresProviderFlag(t *testing.T) {
+func TestImageGenerateUsesDefaultProviderWhenProviderFlagOmitted(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	generator := &fakeImageGenerator{}
+
+	f := newImageGenerateFactory(stdout, stderr, generator)
+	_ = f.CredentialStore.SaveAPIKey(providers.Gemini, "test-key")
+	_ = f.CredentialStore.SetDefaultProvider(providers.Gemini)
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{"generate", "--prompt", "a cat", "--output", "out.png"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+	if generator.req.Provider != providers.Gemini {
+		t.Fatalf("provider = %q, want %q", generator.req.Provider, providers.Gemini)
+	}
+}
+
+func TestImageGenerateReturnsErrorWhenNoDefaultAndNoProviderFlag(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	f := newImageGenerateFactory(stdout, stderr, &fakeImageGenerator{})
 
 	cmd := NewCmdImage(f)
-	cmd.SetArgs([]string{"generate", "--prompt", "a cat"})
+	cmd.SetArgs([]string{"generate", "--prompt", "a cat", "--output", "out.png"})
 
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("Execute returned nil error without --provider")
-	}
-
-	want := "required flag(s) \"provider\" not set"
-	if err.Error() != want {
-		t.Fatalf("error = %q, want %q", err.Error(), want)
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("expected error when no provider configured")
 	}
 }
 
@@ -72,14 +86,14 @@ func TestImageGenerateRejectsUnsupportedProvider(t *testing.T) {
 	f := newImageGenerateFactory(stdout, stderr, &fakeImageGenerator{})
 
 	cmd := NewCmdImage(f)
-	cmd.SetArgs([]string{"generate", "--provider", "openai", "--prompt", "a cat"})
+	cmd.SetArgs([]string{"generate", "--provider", "unknown-provider", "--prompt", "a cat"})
 
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("Execute returned nil error for unsupported provider")
 	}
 
-	want := "unsupported provider: openai"
+	want := "unsupported provider: unknown-provider"
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
@@ -276,5 +290,60 @@ func TestImageGenerateWritesJSONResultOnSuccess(t *testing.T) {
 	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260409102030_456.png\",\"model\":\"gemini-3.1-flash-image-preview\",\"inputImageCount\":1}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestImageGenerateDefaultsForOpenAI(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	generator := &fakeImageGenerator{}
+	f := newImageGenerateFactory(stdout, stderr, generator)
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.OpenAI,
+		"--prompt", "a cat",
+		"--output", "out.png",
+	})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+	if generator.req.Model != openAIDefaultModel {
+		t.Fatalf("model = %q, want %q", generator.req.Model, openAIDefaultModel)
+	}
+	if generator.req.ImageSize != "1024x1024" {
+		t.Fatalf("image size = %q, want %q", generator.req.ImageSize, "1024x1024")
+	}
+	if generator.req.Quality != "standard" {
+		t.Fatalf("quality = %q, want %q", generator.req.Quality, "standard")
+	}
+	if generator.req.Style != "vivid" {
+		t.Fatalf("style = %q, want %q", generator.req.Style, "vivid")
+	}
+}
+
+func TestImageGenerateRejectsUnsupportedOpenAISize(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	f := newImageGenerateFactory(stdout, stderr, &fakeImageGenerator{})
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.OpenAI,
+		"--prompt", "a cat",
+		"--output", "out.png",
+		"--image-size", "512x512",
+	})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for unsupported openai size")
+	}
+	want := "unsupported image size for openai: 512x512"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
