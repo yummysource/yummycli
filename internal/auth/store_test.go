@@ -176,3 +176,32 @@ func TestProviderCredentialStoreSaveAPIKeyNormalizesProviderName(t *testing.T) {
 		t.Fatalf("stored api key = %q, want %q", got, "test-api-key")
 	}
 }
+
+func TestSetAndGetDefaultProvider(t *testing.T) {
+	store := NewProviderCredentialStore(newMemorySecretStore())
+
+	err := store.SetDefaultProvider("gemini")
+	if err != nil {
+		t.Fatalf("SetDefaultProvider returned error: %v", err)
+	}
+
+	got, err := store.GetDefaultProvider()
+	if err != nil {
+		t.Fatalf("GetDefaultProvider returned error: %v", err)
+	}
+	if got != "gemini" {
+		t.Fatalf("got %q, want %q", got, "gemini")
+	}
+}
+
+func TestGetDefaultProviderReturnsEmptyWhenNotSet(t *testing.T) {
+	store := NewProviderCredentialStore(newMemorySecretStore())
+
+	got, err := store.GetDefaultProvider()
+	if err != nil {
+		t.Fatalf("GetDefaultProvider returned error: %v", err)
+	}
+	if got != "" {
+		t.Fatalf("got %q, want empty string", got)
+	}
+}

@@ -138,6 +138,25 @@ func (s *ProviderCredentialStore) ListConfigured() ([]ProviderStatus, error) {
 	return result, nil
 }
 
+const configDefaultProviderAccount = "config:default_provider"
+
+// SetDefaultProvider persists the default provider name.
+func (s *ProviderCredentialStore) SetDefaultProvider(provider string) error {
+	return s.store.Set(secretServiceName, configDefaultProviderAccount, provider)
+}
+
+// GetDefaultProvider returns the configured default provider, or "" if not set.
+func (s *ProviderCredentialStore) GetDefaultProvider() (string, error) {
+	value, err := s.store.Get(secretServiceName, configDefaultProviderAccount)
+	if err != nil {
+		if errors.Is(err, ErrSecretNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	return value, nil
+}
+
 // GetAPIKey returns the stored API key for the given provider.
 func (s *ProviderCredentialStore) GetAPIKey(provider string) (string, error) {
 	normalizedProvider, err := providers.Normalize(provider)
