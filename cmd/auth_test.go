@@ -379,7 +379,7 @@ func TestAuthListReturnsAllProvidersWhenNoneConfigured(t *testing.T) {
 	}
 
 	got := stdout.String()
-	want := "[{\"provider\":\"gemini\",\"configured\":false}]\n"
+	want := "[{\"provider\":\"gemini\",\"configured\":false},{\"provider\":\"openai\",\"configured\":false}]\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
@@ -411,7 +411,7 @@ func TestAuthListShowsConfiguredProviderWithKeyPreview(t *testing.T) {
 	}
 
 	got := stdout.String()
-	want := "[{\"provider\":\"gemini\",\"configured\":true,\"apiKeyPreview\":\"AIza******abcd\"}]\n"
+	want := "[{\"provider\":\"gemini\",\"configured\":true,\"apiKeyPreview\":\"AIza******abcd\"},{\"provider\":\"openai\",\"configured\":false}]\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
