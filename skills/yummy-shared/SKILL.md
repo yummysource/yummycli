@@ -13,7 +13,6 @@ metadata:
     primaryEnv: GEMINI_API_KEY
   hermes:
     tags: [yummycli, shared, gemini, authentication]
-    requires_toolsets: ["yummycli"]
 install:
   - kind: node
     package: "@yummysource/yummycli"

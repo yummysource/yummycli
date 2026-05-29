@@ -14,7 +14,6 @@ metadata:
   hermes:
     tags: [audio, tts, speech, gemini, text-to-speech, voice, dialogue]
     related_skills: ["yummy-shared"]
-    requires_toolsets: ["yummycli"]
 install:
   - kind: node
     package: "@yummysource/yummycli"

@@ -14,7 +14,6 @@ metadata:
   hermes:
     tags: [image, gemini, generation, editing, multimodal]
     related_skills: ["yummy-shared"]
-    requires_toolsets: ["yummycli"]
 install:
   - kind: node
     package: "@yummysource/yummycli"

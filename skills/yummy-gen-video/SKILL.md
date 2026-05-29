@@ -14,7 +14,6 @@ metadata:
   hermes:
     tags: [video, gemini, veo, generation, image-to-video, multimodal]
     related_skills: ["yummy-shared"]
-    requires_toolsets: ["yummycli"]
 install:
   - kind: node
     package: "@yummysource/yummycli"
