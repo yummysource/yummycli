@@ -5,8 +5,9 @@ import (
 
 	"github.com/yummysource/yummycli/internal/audio"
 	"github.com/yummysource/yummycli/internal/auth"
-	"github.com/yummysource/yummycli/internal/image"
+	internalimage "github.com/yummysource/yummycli/internal/image"
 	"github.com/yummysource/yummycli/internal/output"
+	"github.com/yummysource/yummycli/internal/providers"
 	"github.com/yummysource/yummycli/internal/video"
 	"golang.org/x/term"
 )
@@ -25,10 +26,16 @@ func NewDefault() *Factory {
 		ErrOut:     os.Stderr,
 		IsTerminal: isTerminal,
 	}
+	imageGenerators := map[string]internalimage.ImageGenerator{
+		providers.Gemini: internalimage.NewGeminiGenerator(credentialStore),
+		providers.OpenAI: internalimage.NewOpenAIGenerator(credentialStore, ""),
+	}
+	imageGenerator := internalimage.NewMultiGenerator(imageGenerators, streams.ErrOut)
+
 	return &Factory{
 		IOStreams:       streams,
 		CredentialStore: credentialStore,
-		ImageGenerator:  image.NewGeminiGenerator(credentialStore),
+		ImageGenerator:  imageGenerator,
 		VideoGenerator:  video.NewGeminiGenerator(credentialStore),
 		Speaker:         audio.NewGeminiSpeaker(credentialStore),
 		Output:          output.New(streams.Out),
