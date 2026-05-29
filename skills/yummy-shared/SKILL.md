@@ -1,7 +1,7 @@
 ---
 name: yummy-shared
-version: 1.0.0
-description: "Use when operating yummycli for the first time, checking Gemini credential status, handling yummycli JSON command output, or applying shared CLI safety rules before image generation or editing."
+version: 2.0.0
+description: "Use when operating yummycli — covers first-time setup, provider configuration, JSON output parsing, and shared CLI safety rules."
 always: true
 metadata:
   requires:
@@ -9,10 +9,8 @@ metadata:
   openclaw:
     requires:
       bins: ["yummycli"]
-      env: ["GEMINI_API_KEY"]
-    primaryEnv: GEMINI_API_KEY
   hermes:
-    tags: [yummycli, shared, gemini, authentication]
+    tags: [yummycli, shared, authentication]
 install:
   - kind: node
     package: "@yummysource/yummycli"
@@ -21,27 +19,33 @@ install:
 
 # yummycli Shared Rules
 
-Shared operating rules for `yummycli`.
+## First-Time Setup
 
-## Authentication
-
-Before running Gemini image commands, confirm the provider is configured:
+Check which providers are configured:
 
 ```bash
-yummycli auth status --provider gemini
+yummycli auth list
 ```
 
-If Gemini is not configured, initialize it:
+If no provider is configured, initialize one:
 
 ```bash
-yummycli gemini init --api-key "<api-key>"
+# Gemini
+yummycli init --provider gemini --api-key "<key>" --default
+
+# OpenAI
+yummycli init --provider openai --api-key "<key>" --default
+```
+
+Add a second provider as fallback (omit --default to keep existing default):
+
+```bash
+yummycli init --provider openai --api-key "<key>"
 ```
 
 ## Output Contract
 
 All `yummycli` generation commands return JSON on stdout. Read the response and use the `output` field as the generated file path.
-
-Image example:
 
 ```json
 {
@@ -52,24 +56,10 @@ Image example:
 }
 ```
 
-Video example:
-
-```json
-{
-  "provider": "gemini",
-  "output": "veo_20260417_142301_047.mp4",
-  "model": "veo-3.1-fast-generate-preview",
-  "duration_seconds": 8,
-  "aspect_ratio": "16:9",
-  "resolution": "1080p",
-  "elapsed_seconds": 73
-}
-```
-
 ## Safety Rules
 
 - Only use local image files explicitly provided by the user.
 - Preserve the order of repeated `--input-image` flags.
-- Do not overwrite a user-specified output path unless the command is intentionally run that way.
+- Do not overwrite a user-specified output path unless explicitly intended.
 - If the command returns a validation error, fix the arguments before retrying.
 - Report the final output path back to the user after a successful run.
