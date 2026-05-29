@@ -11,7 +11,7 @@ func TestRootCommandIncludesCoreGroups(t *testing.T) {
 
 	root := NewRootCommand(f)
 
-	expected := []string{"audio", "auth", "gemini", "image", "version", "video"}
+	expected := []string{"audio", "auth", "gemini", "image", "init", "version", "video"}
 
 	assertSubcommands(t, root, expected)
 }

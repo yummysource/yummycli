@@ -11,12 +11,15 @@ import (
 
 const rootLong = `yummycli - AI-friendly CLI for multimodal model providers.
 
-  Current Phase 1 scope:
-    - Gemini auth initialization
-    - Gemini Nano Banana image generation
-    - Generic image capability commands
+  Configure providers:
+    - yummycli init --provider gemini --api-key <key> --default
+    - yummycli init --provider openai --api-key <key>
 
-  This CLI uses a provider-first command surface with a capability-first internal architecture.`
+  Generate images:
+    - yummycli image generate --prompt "..."
+    - yummycli gemini nanobanana --prompt "..."
+
+  Provider is resolved from config when --provider is omitted.`
 
 // Execute runs the root command and returns the process exit code.
 func Execute() int {
@@ -47,6 +50,7 @@ func NewRootCommand(f *cmdutil.Factory) *cobra.Command {
 
 	root.AddCommand(
 		newVersionCommand(f),
+		NewCmdInit(f),
 		NewCmdGemini(f),
 		NewCmdImage(f),
 		NewCmdVideo(f),
