@@ -320,8 +320,8 @@ func TestImageGenerateDefaultsForOpenAI(t *testing.T) {
 	if generator.req.Model != openAIDefaultModel {
 		t.Fatalf("model = %q, want %q", generator.req.Model, openAIDefaultModel)
 	}
-	if generator.req.ImageSize != "1024x1024" {
-		t.Fatalf("image size = %q, want %q", generator.req.ImageSize, "1024x1024")
+	if generator.req.ImageSize != "1536x864" {
+		t.Fatalf("image size = %q, want %q", generator.req.ImageSize, "1536x864")
 	}
 }
 

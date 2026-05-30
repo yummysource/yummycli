@@ -133,7 +133,7 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 			opts.Model = openAIDefaultModel
 		}
 		if opts.ImageSize == "" {
-			opts.ImageSize = "1024x1024"
+			opts.ImageSize = "1536x864"
 		}
 		if err := validateOpenAISize(opts.ImageSize); err != nil {
 			return err
@@ -211,9 +211,12 @@ func validateOpenAIOutputFormat(format string) error {
 // validateOpenAISize checks that the size is a known OpenAI image size.
 func validateOpenAISize(size string) error {
 	valid := []string{
-		"1024x1024",           // gpt-image-1 and dall-e-3
-		"1536x1024",           // gpt-image-1 landscape
-		"1024x1536",           // gpt-image-1 portrait
+		"1536x864",            // 16:9 default
+		"1024x576",            // 16:9 smaller
+		"2048x1152",           // 16:9 larger
+		"1024x1024",           // square
+		"1536x1024",           // 3:2 landscape
+		"1024x1536",           // 2:3 portrait
 		"1024x1792", "1792x1024", // dall-e-3
 	}
 	for _, v := range valid {
