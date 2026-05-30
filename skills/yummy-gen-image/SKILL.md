@@ -82,11 +82,12 @@ yummycli image generate \
 
 ### OpenAI
 
-- User says `gpt-image-2` or `gpt image 2` or similar → `--model gpt-image-2`
-- User says `gpt-image-1` or `gpt image 1` or similar → `--model gpt-image-1`
-- User says `dall-e-3` or `dalle 3` → `--model dall-e-3`
-- User mentions a model name that cannot be mapped to a known OpenAI image model → omit `--model` and let yummycli use its default (`gpt-image-2`); do NOT guess or invent model names
-- No explicit model request → omit `--model`, let yummycli use its default
+Supported models: `gpt-image-2` (default), `gpt-5.5`
+
+- User says `gpt-image-2` or `gpt image 2` → `--model gpt-image-2`
+- User says `gpt-5.5` or `gpt 5.5` → `--model gpt-5.5`
+- User mentions any other model name → pass it through with `--model`; yummycli will warn and fall back to `gpt-image-2` automatically
+- No explicit model request → omit `--model`, let yummycli use its default (`gpt-image-2`)
 
 ## Intent to Parameters
 

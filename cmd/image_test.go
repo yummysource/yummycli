@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 	"time"
 
@@ -348,7 +349,7 @@ func TestImageGenerateRejectsUnsupportedOpenAISize(t *testing.T) {
 	}
 }
 
-func TestImageGeneratePassesExplicitOpenAIModel(t *testing.T) {
+func TestImageGeneratePassesKnownOpenAIModel(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	generator := &fakeImageGenerator{}
@@ -360,13 +361,39 @@ func TestImageGeneratePassesExplicitOpenAIModel(t *testing.T) {
 		"--provider", providers.OpenAI,
 		"--prompt", "a cat",
 		"--output", "out.png",
-		"--model", "dall-e-3",
+		"--model", "gpt-5.5",
 	})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute returned error: %v", err)
 	}
-	if generator.req.Model != "dall-e-3" {
-		t.Fatalf("model = %q, want dall-e-3", generator.req.Model)
+	if generator.req.Model != "gpt-5.5" {
+		t.Fatalf("model = %q, want gpt-5.5", generator.req.Model)
+	}
+}
+
+func TestImageGenerateWarnsAndFallsBackForUnknownOpenAIModel(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	generator := &fakeImageGenerator{}
+	f := newImageGenerateFactory(stdout, stderr, generator)
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.OpenAI,
+		"--prompt", "a cat",
+		"--output", "out.png",
+		"--model", "gpt-5.5-unknown",
+	})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+	if generator.req.Model != openAIDefaultModel {
+		t.Fatalf("model = %q, want default %q", generator.req.Model, openAIDefaultModel)
+	}
+	if !strings.Contains(stderr.String(), "warning") {
+		t.Fatalf("expected warning on stderr, got %q", stderr.String())
 	}
 }

@@ -128,6 +128,10 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		if opts.Model == "" {
 			opts.Model = openAIDefaultModel
 		}
+		if !isKnownOpenAIModel(opts.Model) {
+			fmt.Fprintf(f.IOStreams.ErrOut, "warning: unknown openai model %q, using default %q\n", opts.Model, openAIDefaultModel)
+			opts.Model = openAIDefaultModel
+		}
 		if opts.ImageSize == "" {
 			opts.ImageSize = "1024x1024"
 		}
@@ -181,6 +185,19 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 }
 
 const openAIDefaultModel = "gpt-image-2"
+
+// knownOpenAIModels lists the OpenAI image models supported by yummycli.
+var knownOpenAIModels = []string{"gpt-image-2", "gpt-5.5"}
+
+// isKnownOpenAIModel reports whether model is a recognised OpenAI image model.
+func isKnownOpenAIModel(model string) bool {
+	for _, m := range knownOpenAIModels {
+		if m == model {
+			return true
+		}
+	}
+	return false
+}
 
 // validateOpenAIOutputFormat checks that the output format is valid for OpenAI.
 func validateOpenAIOutputFormat(format string) error {
