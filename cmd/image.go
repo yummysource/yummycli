@@ -16,15 +16,16 @@ import (
 // Used by both `image generate` (capability layer) and `gemini nanobanana`
 // (provider shortcut) so that the shortcut is a thin wrapper, not a copy.
 type imageGenerateOptions struct {
-	Provider    string
-	Prompt      string
-	Output      string
-	Model       string
-	AspectRatio string
-	ImageSize   string
-	Quality     string
-	Style       string
-	InputImages []string
+	Provider     string
+	Prompt       string
+	Output       string
+	Model        string
+	AspectRatio  string
+	ImageSize    string
+	Quality      string
+	Style        string
+	OutputFormat string
+	InputImages  []string
 }
 
 // imageGenerateResult is the JSON output written on a successful generation.
@@ -69,8 +70,9 @@ func newCmdImageGenerate(f *cmdutil.Factory) *cobra.Command {
 	command.Flags().StringVar(&opts.Model, "model", "", "model name")
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", "", "image aspect ratio")
 	command.Flags().StringVar(&opts.ImageSize, "image-size", "", "image size")
-	command.Flags().StringVar(&opts.Quality, "quality", "", "image quality (openai: standard or hd)")
+	command.Flags().StringVar(&opts.Quality, "quality", "", "image quality (openai: low, medium, high, auto)")
 	command.Flags().StringVar(&opts.Style, "style", "", "image style (openai: vivid or natural)")
+	command.Flags().StringVar(&opts.OutputFormat, "output-format", "", "output format (openai: png, jpeg, webp)")
 	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "input image path (repeatable)")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
@@ -132,12 +134,17 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		if err := validateOpenAISize(opts.ImageSize); err != nil {
 			return err
 		}
+		if opts.OutputFormat != "" {
+			if err := validateOpenAIOutputFormat(opts.OutputFormat); err != nil {
+				return err
+			}
+		}
 	default:
 		return fmt.Errorf("unsupported provider: %s", opts.Provider)
 	}
 
 	if opts.Output == "" {
-		opts.Output = defaultImageOutputPath(opts.Provider)
+		opts.Output = defaultImageOutputPath(opts.Provider, opts.OutputFormat)
 	}
 
 	fallback, err := resolveProviderFallback(f.CredentialStore, opts.Provider)
@@ -146,16 +153,17 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 	}
 
 	req := internalimage.GenerateImageRequest{
-		Provider:    opts.Provider,
-		Prompt:      opts.Prompt,
-		Output:      opts.Output,
-		Model:       opts.Model,
-		AspectRatio: opts.AspectRatio,
-		ImageSize:   opts.ImageSize,
-		Quality:     opts.Quality,
-		Style:       opts.Style,
-		InputImages: opts.InputImages,
-		Fallback:    fallback,
+		Provider:     opts.Provider,
+		Prompt:       opts.Prompt,
+		Output:       opts.Output,
+		Model:        opts.Model,
+		AspectRatio:  opts.AspectRatio,
+		ImageSize:    opts.ImageSize,
+		Quality:      opts.Quality,
+		Style:        opts.Style,
+		OutputFormat: opts.OutputFormat,
+		InputImages:  opts.InputImages,
+		Fallback:     fallback,
 	}
 
 	if err := f.ImageGenerator.GenerateImage(context.Background(), req); err != nil {
@@ -173,6 +181,15 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 }
 
 const openAIDefaultModel = "gpt-image-2"
+
+// validateOpenAIOutputFormat checks that the output format is valid for OpenAI.
+func validateOpenAIOutputFormat(format string) error {
+	switch format {
+	case "png", "jpeg", "webp":
+		return nil
+	}
+	return fmt.Errorf("unsupported output format for openai: %s (supported: png, jpeg, webp)", format)
+}
 
 // validateOpenAISize checks that the size is a known OpenAI image size.
 func validateOpenAISize(size string) error {

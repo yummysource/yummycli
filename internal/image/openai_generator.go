@@ -72,6 +72,9 @@ func (g *OpenAIGenerator) generateImage(ctx context.Context, apiKey string, req 
 	if req.Quality != "" {
 		body["quality"] = req.Quality
 	}
+	if req.OutputFormat != "" {
+		body["output_format"] = req.OutputFormat
+	}
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -122,6 +125,9 @@ func (g *OpenAIGenerator) editImage(ctx context.Context, apiKey string, req Gene
 	}
 	if req.Quality != "" {
 		_ = w.WriteField("quality", req.Quality)
+	}
+	if req.OutputFormat != "" {
+		_ = w.WriteField("output_format", req.OutputFormat)
 	}
 	w.Close()
 

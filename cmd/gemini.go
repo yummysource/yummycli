@@ -242,14 +242,19 @@ func validateImageSize(model, imageSize string) (string, error) {
 // nowFunc returns the current time. It is a variable so tests can substitute a fixed time.
 var nowFunc = time.Now
 
-// defaultImageOutputPath generates a default output file path based on the provider name and current time.
+// defaultImageOutputPath generates a default output file path.
+// format sets the file extension (e.g. "jpeg"); empty defaults to "png".
 // An optional now argument can be passed to inject a fixed time in tests.
-func defaultImageOutputPath(provider string, now ...time.Time) string {
+func defaultImageOutputPath(provider, format string, now ...time.Time) string {
 	var t time.Time
 	if len(now) > 0 {
 		t = now[0]
 	} else {
 		t = nowFunc()
 	}
-	return fmt.Sprintf("%s_%s_%03d.png", provider, t.Format("20060102150405"), t.Nanosecond()/1e6)
+	ext := format
+	if ext == "" {
+		ext = "png"
+	}
+	return fmt.Sprintf("%s_%s_%03d.%s", provider, t.Format("20060102150405"), t.Nanosecond()/1e6, ext)
 }
