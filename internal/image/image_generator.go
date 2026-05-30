@@ -10,9 +10,8 @@ type GenerateImageRequest struct {
 	Model       string
 	AspectRatio string
 	ImageSize   string
-	Quality      string   // OpenAI only — "standard" or "hd"
-	Style        string   // OpenAI only — "vivid" or "natural"
-	OutputFormat string   // OpenAI only — "png", "jpeg", "webp"
+	Quality      string   // OpenAI only — low, medium, high, auto
+	OutputFormat string   // OpenAI only — png, jpeg, webp
 	Fallback     string   // optional fallback provider name
 	InputImages  []string
 }

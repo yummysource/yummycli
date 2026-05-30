@@ -33,9 +33,9 @@ func NewCmdGemini(f *cmdutil.Factory) *cobra.Command {
 }
 
 // newCmdGeminiInit creates a shortcut for initializing Gemini credentials,
-// equivalent to auth init --provider gemini.
+// equivalent to yummycli init --provider gemini.
 func newCmdGeminiInit(f *cmdutil.Factory) *cobra.Command {
-	opts := &authInitOptions{
+	opts := &initOptions{
 		Provider: providers.Gemini,
 	}
 
@@ -43,14 +43,15 @@ func newCmdGeminiInit(f *cmdutil.Factory) *cobra.Command {
 		Use:   "init",
 		Short: "Initialize Gemini credentials",
 		Annotations: map[string]string{
-			"canonical": "auth init --provider " + providers.Gemini,
+			"canonical": "init --provider " + providers.Gemini,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthInit(f, opts)
+			return runInit(f, opts)
 		},
 	}
 
-	command.Flags().StringVar(&opts.APIKey, "api-key", "", "api key")
+	command.Flags().StringVar(&opts.APIKey, "api-key", "", "Gemini API key")
+	command.Flags().BoolVar(&opts.Default, "default", false, "set Gemini as the default provider")
 	if err := command.MarkFlagRequired("api-key"); err != nil {
 		panic(err)
 	}

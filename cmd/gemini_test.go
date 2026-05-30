@@ -43,7 +43,7 @@ func TestGeminiInitSavesAPIKeyWithGeminiProvider(t *testing.T) {
 	}
 
 	got := stdout.String()
-	want := "{\"provider\":\"gemini\",\"configured\":true}\n"
+	want := "{\"provider\":\"gemini\",\"configured\":true,\"default\":false}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}

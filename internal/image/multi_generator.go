@@ -58,6 +58,5 @@ func (m *MultiGenerator) GenerateImage(ctx context.Context, req GenerateImageReq
 	fallbackReq.ImageSize = ""
 	fallbackReq.AspectRatio = ""
 	fallbackReq.Quality = ""
-	fallbackReq.Style = ""
 	return fallbackGen.GenerateImage(ctx, fallbackReq)
 }

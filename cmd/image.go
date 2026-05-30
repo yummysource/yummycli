@@ -23,7 +23,6 @@ type imageGenerateOptions struct {
 	AspectRatio  string
 	ImageSize    string
 	Quality      string
-	Style        string
 	OutputFormat string
 	InputImages  []string
 }
@@ -223,7 +222,6 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		AspectRatio:  opts.AspectRatio,
 		ImageSize:    opts.ImageSize,
 		Quality:      opts.Quality,
-		Style:        opts.Style,
 		OutputFormat: opts.OutputFormat,
 		InputImages:  opts.InputImages,
 		Fallback:     fallback,

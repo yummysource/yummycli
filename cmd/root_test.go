@@ -31,7 +31,7 @@ func TestGeminiCommandIncludesPhaseOneAliases(t *testing.T) {
 		name      string
 		canonical string
 	}{
-		{name: "init", canonical: "auth init --provider gemini"},
+		{name: "init", canonical: "init --provider gemini"},
 		{name: "nanobanana", canonical: "image generate --provider gemini --preset nano-banana"},
 		{name: "veo", canonical: "video generate --provider gemini"},
 		{name: "speak", canonical: "audio speak --provider gemini"},

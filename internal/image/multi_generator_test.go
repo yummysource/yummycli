@@ -57,7 +57,6 @@ func TestMultiGeneratorClearsProviderSpecificFieldsOnFallback(t *testing.T) {
 		ImageSize:   "1024x1024",
 		AspectRatio: "16:9",
 		Quality:     "standard",
-		Style:       "vivid",
 		Fallback:    "gemini",
 	})
 	if err != nil {
@@ -81,9 +80,6 @@ func TestMultiGeneratorClearsProviderSpecificFieldsOnFallback(t *testing.T) {
 	}
 	if r.Quality != "" {
 		t.Fatalf("fallback Quality = %q, want empty", r.Quality)
-	}
-	if r.Style != "" {
-		t.Fatalf("fallback Style = %q, want empty", r.Style)
 	}
 }
 

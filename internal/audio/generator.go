@@ -27,7 +27,7 @@ type SpeakRequest struct {
 	Output string
 
 	// Model is the provider-specific model ID.
-	// Default: gemini-2.5-flash-preview-tts
+	// Default: gemini-3.1-flash-tts-preview
 	Model string
 
 	// VoiceName is the prebuilt voice to use for single-speaker synthesis.
