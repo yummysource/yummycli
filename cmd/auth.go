@@ -127,6 +127,7 @@ func runAuthInit(f *cmdutil.Factory, opts *authInitOptions) error {
 type authListResult struct {
 	Provider      string `json:"provider"`
 	Configured    bool   `json:"configured"`
+	Default       bool   `json:"default"`
 	APIKeyPreview string `json:"apiKeyPreview,omitempty"`
 }
 
@@ -150,11 +151,17 @@ func runAuthList(f *cmdutil.Factory) error {
 		return err
 	}
 
+	defaultProvider, err := f.CredentialStore.GetDefaultProvider()
+	if err != nil {
+		return err
+	}
+
 	results := make([]authListResult, 0, len(statuses))
 	for _, s := range statuses {
 		results = append(results, authListResult{
 			Provider:      s.Provider,
 			Configured:    s.Configured,
+			Default:       s.Provider == defaultProvider,
 			APIKeyPreview: s.APIKeyPreview,
 		})
 	}
