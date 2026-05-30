@@ -1,7 +1,7 @@
 ---
 name: yummy-gen-voice
 version: 1.0.0
-description: "Use when the user wants to synthesise speech or text-to-speech (TTS) audio with Gemini through yummycli, including single-speaker narration, multi-speaker dialogue (up to 2 speakers), and listing available voices."
+description: "Use when the user wants to synthesise speech or text-to-speech (TTS) audio through yummycli. Gemini only — uses Google Gemini TTS. Covers single-speaker narration, multi-speaker dialogue (up to 2 speakers), and listing available voices."
 metadata:
   requires:
     bins: ["yummycli"]
@@ -24,11 +24,13 @@ install:
 
 Generate spoken audio with `yummycli gemini speak` using Google Gemini TTS.
 
+**Provider: Gemini only.** Gemini credentials are required. OpenAI is not supported for speech synthesis.
+
 ## When to Use
 
 Load this skill when the user asks to synthesise speech, convert text to audio, generate a voiceover, create a narration, or produce a spoken dialogue — including single-speaker TTS and multi-speaker conversation.
 
-> **Prerequisite:** Apply the `yummy-shared` skill first.
+> **Prerequisite:** Apply the `yummy-shared` skill first. Ensure Gemini is configured: `yummycli auth status --provider gemini`
 
 This skill covers three modes with a single command:
 

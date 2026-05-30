@@ -19,6 +19,16 @@ install:
 
 # yummycli Shared Rules
 
+## Provider Coverage
+
+| Capability | Gemini | OpenAI |
+|---|---|---|
+| Image generation & editing | ✅ | ✅ |
+| Video generation | ✅ | — |
+| Speech synthesis (TTS) | ✅ | — |
+
+Video and speech require Gemini. Configure Gemini first if you need these capabilities.
+
 ## First-Time Setup
 
 Check which providers are configured:

@@ -1,7 +1,7 @@
 ---
 name: yummy-gen-image
 version: 2.1.0
-description: "Use when the user wants to generate or edit raster images through yummycli, including prompt-only generation, single-image editing, and multi-image reference editing. Provider is resolved from yummycli config."
+description: "Use when the user wants to generate or edit raster images through yummycli, including prompt-only generation, single-image editing, and multi-image reference editing. Supports both Gemini and OpenAI providers."
 metadata:
   requires:
     bins: ["yummycli"]
@@ -11,7 +11,7 @@ metadata:
       bins: ["yummycli"]
     related_skills: ["yummy-shared"]
   hermes:
-    tags: [image, generation, editing, multimodal]
+    tags: [image, generation, editing, multimodal, gemini, openai]
     related_skills: ["yummy-shared"]
 install:
   - kind: node
@@ -22,6 +22,8 @@ install:
 # Generate Image
 
 Create or edit images with `yummycli image generate`.
+
+Supported providers: **Gemini** and **OpenAI**. Provider is resolved from `yummycli` config.
 
 ## When to Use
 
@@ -54,7 +56,7 @@ yummycli image generate \
 | `--model` | Specific model name |
 | `--output` | Output file path (auto-generated if omitted) |
 | `--aspect-ratio` | Gemini only: e.g. `16:9`, `9:16`, `1:1` |
-| `--image-size` | Gemini: `1K` `2K` `4K` — OpenAI: `1024x1024` `1536x1024` `1024x1536` |
+| `--image-size` | Gemini: `1K` `2K` `4K` — OpenAI: `1536x864` `1024x1024` `1536x1024` `1024x1536` |
 | `--quality` | OpenAI only: `low` `medium` `high` `auto` |
 | `--output-format` | OpenAI only: `png` (default) `jpeg` `webp` |
 | `--input-image` | Input image path for editing; repeat for multiple images |
@@ -68,7 +70,7 @@ yummycli image generate \
 
 **OpenAI** (when openai is the active provider):
 - Model: `gpt-image-2`
-- Size: `1024x1024`
+- Size: `1536x864` (16:9)
 - Quality: API default (auto)
 - Output format: `png`
 
@@ -86,7 +88,7 @@ Supported models: `gpt-image-2` (default), `gpt-5.5`
 
 - User says `gpt-image-2` or `gpt image 2` → `--model gpt-image-2`
 - User says `gpt-5.5` or `gpt 5.5` → `--model gpt-5.5`
-- User mentions any other model name → pass it through with `--model`; yummycli will warn and fall back to `gpt-image-2` automatically
+- User mentions any other model name → pass it through; yummycli will warn and fall back to `gpt-image-2` automatically
 - No explicit model request → omit `--model`, let yummycli use its default (`gpt-image-2`)
 
 ## Intent to Parameters
@@ -99,9 +101,9 @@ Supported models: `gpt-image-2` (default), `gpt-5.5`
 - Shape unclear → omit
 
 **Image-size guidance (OpenAI):**
-- Landscape / horizontal → `--image-size 1536x1024`
+- Landscape / horizontal → `--image-size 1536x864` (default, 16:9)
 - Portrait / vertical → `--image-size 1024x1536`
-- Square or unspecified → `--image-size 1024x1024` (default)
+- Square → `--image-size 1024x1024`
 
 **Output format guidance (OpenAI):**
 - User asks for JPEG or smaller file size → `--output-format jpeg`

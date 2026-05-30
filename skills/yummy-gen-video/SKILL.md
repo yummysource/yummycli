@@ -1,7 +1,7 @@
 ---
 name: yummy-gen-video
 version: 1.0.0
-description: "Use when the user wants to generate a video with Gemini Veo through yummycli, including text-to-video, image-to-video (single starting frame), and reference-image-guided generation (up to 3 images)."
+description: "Use when the user wants to generate a video through yummycli. Gemini only — uses Google Veo. Covers text-to-video, image-to-video (single starting frame), and reference-image-guided generation (up to 3 images)."
 metadata:
   requires:
     bins: ["yummycli"]
@@ -24,11 +24,13 @@ install:
 
 Create videos with `yummycli gemini veo` using Google Veo.
 
+**Provider: Gemini only.** Gemini credentials are required. OpenAI is not supported for video generation.
+
 ## When to Use
 
 Load this skill when the user asks to generate, create, or animate a video using AI — including text-to-video, animating a still image, or generating a video guided by reference images.
 
-> **Prerequisite:** Apply the `yummy-shared` skill first.
+> **Prerequisite:** Apply the `yummy-shared` skill first. Ensure Gemini is configured: `yummycli auth status --provider gemini`
 
 This skill covers three generation modes with a single command:
 
