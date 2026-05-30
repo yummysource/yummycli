@@ -10,7 +10,7 @@
 
 An AI-friendly CLI for multimodal model providers — built for humans and AI Agents.
 
-Supports image generation and editing, video generation, and text-to-speech synthesis via [Gemini](https://deepmind.google/technologies/gemini/), with more providers (Claude, OpenAI, Qwen) planned.
+Supports image generation and editing via **Gemini** and **OpenAI**, plus video generation and text-to-speech synthesis via Gemini.
 
 [Install](#installation) · [Auth](#authentication) · [Image Generation](#image-generation) · [Video Generation](#video-generation) · [Voice Generation](#voice-generation) · [Agent Skills](#agent-skills) · [Commands](#command-reference)
 
@@ -22,7 +22,7 @@ Supports image generation and editing, video generation, and text-to-speech synt
 - **Capability-First Architecture** — `image generate`, `video generate`, and `audio speak` are the stable automation contracts; `gemini nanobanana`, `gemini veo`, and `gemini speak` are human-friendly shortcuts on top
 - **Structured JSON Output** — Every command writes JSON to stdout, making it trivial to pipe into agents, scripts, or other tools
 - **Secure Credential Storage** — API keys stored in the OS-native keychain (macOS Keychain, Linux Secret Service), never in plain text
-- **Provider-Agnostic** — One CLI surface across providers; add a new provider without changing your scripts
+- **Multi-Provider with Automatic Fallback** — Configure two providers; if the primary fails, the other is tried automatically
 
 ---
 
@@ -64,124 +64,158 @@ npx skills add yummysource/yummycli -y -g
 
 ## Authentication
 
-yummycli stores API keys per provider in the OS keychain. You only need to do this once per provider.
+yummycli stores API keys per provider in the OS keychain. Configure each provider once.
 
-### Commands
+### Provider Coverage
+
+| Capability | Gemini | OpenAI |
+|---|---|---|
+| Image generation & editing | ✅ | ✅ |
+| Video generation | ✅ | — |
+| Speech synthesis | ✅ | — |
+
+### Quick Setup
+
+```bash
+# Configure primary provider (set as default)
+yummycli init --provider gemini --api-key "AIza..." --default
+
+# Optionally add a second provider as fallback
+yummycli init --provider openai --api-key "sk-..."
+```
+
+If both providers are configured, the non-default acts as an automatic fallback when the primary fails.
+
+### Check configuration
+
+```bash
+yummycli auth list
+```
+
+```json
+[
+  {"provider":"gemini","configured":true,"default":true,"apiKeyPreview":"AIza******g7Aw"},
+  {"provider":"openai","configured":true,"default":false,"apiKeyPreview":"sk-p******mEAA"}
+]
+```
+
+`"default": true` identifies the provider used when `--provider` is omitted.
+
+### Switch default provider
+
+```bash
+# Key already stored — no need to re-enter it
+yummycli init --provider openai --default
+```
+
+### Other auth commands
 
 | Command | Description |
 |---------|-------------|
-| `auth init` | Save an API key for a provider |
-| `auth list` | List all providers and their credential status |
-| `auth status` | Show credential status for a specific provider |
-| `auth remove` | Delete stored credentials for a provider |
-
-### Examples
-
-```bash
-# Save a Gemini API key
-yummycli auth init --provider gemini --api-key "AIza..."
-
-# Check if Gemini is configured (shows masked key preview)
-yummycli auth status --provider gemini
-
-# Remove Gemini credentials
-yummycli auth remove --provider gemini
-```
-
-**Output from `auth init`:**
-
-```json
-{"provider":"gemini","configured":true}
-```
-
-**Output from `auth list`:**
-
-```json
-[{"provider":"gemini","configured":true,"apiKeyPreview":"AIza...xxxx"}]
-```
-
-**Output from `auth status`:**
-
-```json
-{"provider":"gemini","configured":true,"apiKeyPreview":"AIza...xxxx"}
-```
+| `yummycli init --provider <name> --api-key <key> [--default]` | Save API key, optionally set as default |
+| `yummycli auth list` | List all providers, credential status, and default |
+| `yummycli auth status --provider <name>` | Show credential status for a specific provider |
+| `yummycli auth remove --provider <name>` | Delete stored credentials |
 
 ### Gemini shortcut
 
-`gemini init` is a provider-scoped alias for `auth init --provider gemini`:
+`gemini init` is an alias for `init --provider gemini`:
 
 ```bash
-yummycli gemini init --api-key "AIza..."
+yummycli gemini init --api-key "AIza..." --default
 ```
 
 ---
 
 ## Image Generation
 
-yummycli supports two equivalent entry points for image generation:
+Image generation supports both **Gemini** and **OpenAI**. The provider is resolved from your config — no need to specify it every time.
+
+| Provider | Default model | Default size |
+|---|---|---|
+| Gemini | `gemini-3.1-flash-image` | `16:9`, `1K` |
+| OpenAI | `gpt-image-2` | `1536x864` (16:9) |
+
+Two equivalent entry points are available:
 
 | Entry point | Intended for |
 |-------------|-------------|
-| `gemini nanobanana` | Human use — Gemini-specific defaults pre-applied |
-| `image generate --provider gemini` | Automation / scripting — explicit, stable contract |
-
-Both call the same underlying implementation. Use whichever fits your context.
+| `yummycli image generate` | All providers — uses configured default |
+| `yummycli gemini nanobanana` | Gemini shortcut with defaults pre-applied |
 
 ### Quick start
 
 ```bash
-# Step 1: configure Gemini credentials (one-time)
-yummycli gemini init --api-key "AIza..."
+# Step 1: configure providers (one-time)
+yummycli init --provider gemini --api-key "AIza..." --default
+yummycli init --provider openai --api-key "sk-..."   # optional fallback
 
-# Step 2: generate an image from a text prompt
-yummycli gemini nanobanana --prompt "A ripe banana on a white plate, studio lighting"
-```
-
-The generated image is saved to the current directory with an auto-generated filename:
-
-```
-gemini_20260410123456_789.png
+# Step 2: generate an image (uses default provider)
+yummycli image generate --prompt "A ripe banana on a white plate, studio lighting"
 ```
 
 ### Flags
 
-| Flag | Description | Default (Gemini) |
-|------|-------------|-----------------|
-| `--prompt` | Image generation prompt (**required**) | — |
+**Common flags (both providers):**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--prompt` | Image generation or editing prompt (**required**) | — |
+| `--provider` | Override provider (`gemini` or `openai`) | from config |
+| `--model` | Model name | provider default |
 | `--output` | Output file path | auto-generated |
-| `--model` | Gemini model | `gemini-3.1-flash-image-preview` |
-| `--aspect-ratio` | Image aspect ratio | `16:9` |
-| `--image-size` | Output resolution | `1K` |
 | `--input-image` | Input image for editing (repeatable) | — |
 
-> For `image generate`, also pass `--provider gemini` (required). The same Gemini defaults apply — `--model`, `--aspect-ratio`, and `--image-size` are filled in automatically when omitted.
+**Gemini-specific flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--aspect-ratio` | Named ratio: `16:9`, `9:16`, `21:9`, `1:1`, etc. | `16:9` |
+| `--image-size` | Resolution: `512`, `0.5K`, `1K`, `2K`, `4K` | `1K` |
+
+**OpenAI-specific flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--image-size` | Dimensions in `WxH` format (multiples of 16, ratio 1:3–3:1) | `1536x864` |
+| `--quality` | Rendering quality: `low`, `medium`, `high`, `auto` | API auto |
+| `--output-format` | Output format: `png`, `jpeg`, `webp` | `png` |
 
 ### Text-to-image generation
 
 ```bash
-yummycli gemini nanobanana \
-  --prompt "A cyberpunk cityscape at night, neon reflections on wet streets"
+# Uses configured default provider
+yummycli image generate --prompt "A cyberpunk cityscape at night"
 
-# Specify output path and resolution
-yummycli gemini nanobanana \
-  --prompt "A minimalist logo, flat design, white background" \
-  --output logo.png \
-  --image-size 4K
+# Explicit Gemini with 4K resolution
+yummycli image generate --provider gemini \
+  --prompt "A minimalist logo, flat design" \
+  --image-size 4K --output logo.png
+
+# Explicit OpenAI with JPEG output
+yummycli image generate --provider openai \
+  --prompt "A rabbit on a wooden table" \
+  --output-format jpeg
 ```
 
 ### Image editing
 
-Pass one or more reference images with `--input-image`:
+Pass one or more reference images with `--input-image`. Both providers support editing.
 
 ```bash
-# Single-image edit
-yummycli gemini nanobanana \
+# Single-image edit (Gemini)
+yummycli image generate --provider gemini \
   --prompt "Turn this into a watercolor illustration" \
   --input-image ./photo.png
 
-# Multi-image reference
-yummycli gemini nanobanana \
-  --prompt "Blend these two references into a single polished poster" \
+# Single-image edit (OpenAI)
+yummycli image generate --provider openai \
+  --prompt "Add a rainbow in the background" \
+  --input-image ./photo.png
+
+# Multi-image compositing (Gemini)
+yummycli image generate --provider gemini \
+  --prompt "Blend these references into one polished poster" \
   --input-image ./subject.png \
   --input-image ./background.jpg
 ```
@@ -190,102 +224,83 @@ Supported input formats: `.png`, `.jpg` / `.jpeg`, `.webp`.
 
 ### Aspect ratio
 
-```bash
-# Vertical — phone wallpaper, story format
-yummycli gemini nanobanana --prompt "..." --aspect-ratio 9:16
+Both providers support 16:9 by default. To request a different ratio:
 
-# Square — social avatar, icon
-yummycli gemini nanobanana --prompt "..." --aspect-ratio 1:1
-
-# Widescreen — desktop wallpaper, presentation banner
-yummycli gemini nanobanana --prompt "..." --aspect-ratio 21:9
-```
+| Ratio | Gemini flag | OpenAI flag |
+|---|---|---|
+| 21:9 ultrawide | `--aspect-ratio 21:9` | `--image-size 2016x864` |
+| 16:9 widescreen | `--aspect-ratio 16:9` | `--image-size 1536x864` |
+| 1:1 square | `--aspect-ratio 1:1` | `--image-size 1024x1024` |
+| 9:16 portrait | `--aspect-ratio 9:16` | `--image-size 864x1536` |
 
 ### Model selection
 
+**Gemini:**
 ```bash
-# Flash (default) — faster, supports more aspect ratios and smaller sizes
-yummycli gemini nanobanana --prompt "..." --model gemini-3.1-flash-image-preview
+# Flash (default) — faster, supports more aspect ratios and sizes
+yummycli image generate --provider gemini --prompt "..." --model gemini-3.1-flash-image
 
-# Pro — higher quality, fewer size/ratio options
-yummycli gemini nanobanana --prompt "..." --model gemini-3-pro-image-preview
+# Pro — higher quality
+yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image-preview
 ```
 
-### Model compatibility
+**OpenAI:**
+```bash
+# gpt-image-2 (default)
+yummycli image generate --provider openai --prompt "..."
 
-**Aspect ratio**
+# gpt-5.5
+yummycli image generate --provider openai --prompt "..." --model gpt-5.5
+```
+
+Unknown OpenAI model names trigger a warning and fall back to `gpt-image-2` automatically.
+
+### Gemini model compatibility
+
+**Aspect ratio:**
 
 | Model | Supported values |
 |-------|-----------------|
-| `gemini-3.1-flash-image-preview` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
+| `gemini-3.1-flash-image` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
 | `gemini-3-pro-image-preview` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
 
-`1:4`, `1:8`, `4:1`, `8:1` are Flash-only and not supported by the Pro model.
+`1:4`, `1:8`, `4:1`, `8:1` are Flash-only.
 
-**Image size**
+**Image size:**
 
 | Model | Supported values |
 |-------|-----------------|
-| `gemini-3.1-flash-image-preview` | `512` `0.5K` `1K` `2K` `4K` |
+| `gemini-3.1-flash-image` | `512` `0.5K` `1K` `2K` `4K` |
 | `gemini-3-pro-image-preview` | `1K` `2K` `4K` |
 
-`512` and `0.5K` are Flash-only. Size values are case-insensitive (`4k` and `4K` both work).
+`512` and `0.5K` are Flash-only.
 
 ### JSON output
-
-Every successful generation writes a result to stdout:
 
 ```json
 {
   "provider": "gemini",
   "output": "gemini_20260410123456_789.png",
-  "model": "gemini-3.1-flash-image-preview",
+  "model": "gemini-3.1-flash-image",
   "inputImageCount": 0
 }
 ```
-
-Use the `output` field to locate the generated file.
-
-### Using `image generate` directly
-
-`image generate` is the provider-agnostic stable API. It accepts the same flags but requires an explicit `--provider`:
-
-```bash
-yummycli image generate \
-  --provider gemini \
-  --prompt "A serene mountain lake at sunrise" \
-  --aspect-ratio 16:9 \
-  --image-size 2K \
-  --output landscape.png
-```
-
-This form is recommended for scripts and AI Agents — it will continue to work unchanged as new providers are added.
 
 ---
 
 ## Video Generation
 
-yummycli supports video generation via Google Veo, with two equivalent entry points:
+Video generation uses Google Veo (Gemini only).
 
 | Entry point | Intended for |
 |-------------|-------------|
 | `gemini veo` | Human use — Gemini Veo defaults pre-applied |
-| `video generate --provider gemini` | Automation / scripting — explicit, stable contract |
+| `video generate --provider gemini` | Automation / scripting |
 
 ### Quick start
 
 ```bash
-# Step 1: configure Gemini credentials (one-time)
-yummycli gemini init --api-key "AIza..."
-
-# Step 2: generate a video from a text prompt
 yummycli gemini veo --prompt "A golden retriever puppy chasing a red ball in a sunny park"
-```
-
-The generated video is saved to the current directory with an auto-generated filename:
-
-```
-veo_20260417_142301_047.mp4
 ```
 
 ### Flags
@@ -298,37 +313,31 @@ veo_20260417_142301_047.mp4
 | `--aspect-ratio` | Video aspect ratio | `16:9` |
 | `--duration` | Duration in seconds | `8` |
 | `--resolution` | Video resolution | `1080p` |
-| `--input-image` | Input image for image-to-video (repeatable, up to 3) | — |
+| `--input-image` | Input image (repeatable, up to 3) | — |
 
 ### Generation modes
-
-`--input-image` can be repeated; the count determines the generation mode automatically:
 
 | `--input-image` count | Mode |
 |-----------------------|------|
 | 0 | Text-to-video |
-| 1 | Image-to-video — image used as the starting frame |
+| 1 | Image-to-video — image used as starting frame |
 | 2–3 | Reference-guided — images used as ASSET reference inputs |
 
 ```bash
 # Text-to-video
-yummycli gemini veo --prompt "Timelapse of clouds moving over mountain peaks"
+yummycli gemini veo --prompt "Timelapse of clouds over mountain peaks"
 
-# Image-to-video (animate a still image)
-yummycli gemini veo \
-  --prompt "The dog starts running toward the camera" \
-  --input-image ./dog.jpg
+# Image-to-video
+yummycli gemini veo --prompt "The dog starts running" --input-image ./dog.jpg
 
-# Reference-guided (two images)
-yummycli gemini veo \
-  --prompt "Combine the character with this background environment" \
-  --input-image ./character.png \
-  --input-image ./background.jpg
+# Reference-guided
+yummycli gemini veo --prompt "Combine character with background" \
+  --input-image ./character.png --input-image ./background.jpg
 ```
 
 ### Model compatibility
 
-**Duration** accepts only discrete values:
+**Duration** (discrete values only):
 
 | Model | Valid durations (seconds) |
 |-------|--------------------------|
@@ -336,15 +345,15 @@ yummycli gemini veo \
 | `veo-3.0-*` | 4, 6, 8 |
 | `veo-3.1-*` | 4, 6, 8 |
 
-**Resolution** support per model:
+**Resolution:**
 
-| Model | Supported resolutions |
+| Model | Supported |
 |-------|-----------------------|
 | `veo-2.0-generate-001` | `720p` |
 | `veo-3.0-*` | `720p`, `1080p` |
 | `veo-3.1-*` | `720p`, `1080p`, `4k` |
 
-Constraints: `1080p` and `4k` require `--duration 8`. `4k` requires a veo-3.1 model.
+`1080p` and `4k` require `--duration 8`. `4k` requires a veo-3.1 model.
 
 ### JSON output
 
@@ -364,24 +373,17 @@ Constraints: `1080p` and `4k` require `--duration 8`. `4k` requires a veo-3.1 mo
 
 ## Voice Generation
 
-yummycli supports text-to-speech synthesis via Google Gemini TTS, with two equivalent entry points:
+Text-to-speech synthesis uses Google Gemini TTS (Gemini only).
 
 | Entry point | Intended for |
 |-------------|-------------|
 | `gemini speak` | Human use — Gemini TTS defaults pre-applied |
-| `audio speak --provider gemini` | Automation / scripting — explicit, stable contract |
+| `audio speak --provider gemini` | Automation / scripting |
 
 ### Quick start
 
 ```bash
-# Generate speech from text (saves to auto-generated .wav file)
 yummycli gemini speak --text "A golden retriever is the best dog in the world."
-
-# Specify voice and output path
-yummycli gemini speak \
-  --text "Welcome to the future of AI-powered audio." \
-  --voice Puck \
-  --output welcome.wav
 ```
 
 ### Flags
@@ -400,32 +402,19 @@ yummycli gemini speak \
 ### Single-speaker synthesis
 
 ```bash
-# Default voice (Aoede, Breezy)
 yummycli gemini speak --text "Hello, world!"
 
-# Upbeat voice with explicit output path
-yummycli gemini speak \
-  --text "This is an exciting announcement!" \
-  --voice Puck \
-  --output announcement.wav
-
-# Explicit language code
 yummycli gemini speak \
   --text "你好，欢迎使用语音合成服务。" \
-  --voice Aoede \
-  --language zh-CN \
-  --output greeting.wav
+  --voice Aoede --language zh-CN --output greeting.wav
 ```
 
 ### Multi-speaker dialogue
 
-Tag each speaker's lines with `[Name]:` in the text, then map each name to a voice with `--speaker`:
-
 ```bash
 yummycli gemini speak \
-  --text "[Alice]: Hello! Nice to meet you. [Bob]: Hi Alice, great to meet you too!" \
-  --speaker Alice:Aoede \
-  --speaker Bob:Kore \
+  --text "[Alice]: Hello! [Bob]: Hi Alice, great to meet you!" \
+  --speaker Alice:Aoede --speaker Bob:Kore \
   --output dialogue.wav
 ```
 
@@ -435,7 +424,7 @@ yummycli gemini speak \
 yummycli gemini voices
 ```
 
-Returns a JSON array of all 30 prebuilt voices with their style descriptions.
+Returns a JSON array of all 30 prebuilt voices with style descriptions.
 
 ### JSON output
 
@@ -449,21 +438,6 @@ Returns a JSON array of all 30 prebuilt voices with their style descriptions.
 }
 ```
 
-For multi-speaker requests, `voice` is replaced by `speakers`:
-
-```json
-{
-  "provider": "gemini",
-  "output": "dialogue_20260420_143010_112.wav",
-  "model": "gemini-3.1-flash-tts-preview",
-  "speakers": [
-    {"name": "Alice", "voice": "Aoede"},
-    {"name": "Bob", "voice": "Kore"}
-  ],
-  "elapsed_seconds": 4
-}
-```
-
 ---
 
 ## Agent Skills
@@ -472,12 +446,10 @@ yummycli ships with Skills — structured instruction files that teach AI Agents
 
 | Skill | Description |
 |-------|-------------|
-| [`yummy-shared`](./skills/yummy-shared/SKILL.md) | Credential checks, output contract, and shared safety rules — loaded automatically by all other skills |
-| [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | Text-to-image generation, single-image editing, and multi-image reference editing via Gemini |
-| [`yummy-gen-video`](./skills/yummy-gen-video/SKILL.md) | Text-to-video, image-to-video, and reference-image-guided video generation via Gemini Veo |
-| [`yummy-gen-voice`](./skills/yummy-gen-voice/SKILL.md) | Single-speaker TTS, multi-speaker dialogue synthesis, and voice listing via Gemini TTS |
-
-Skills are located in [`./skills/`](./skills/).
+| [`yummy-shared`](./skills/yummy-shared/SKILL.md) | First-time setup, provider config, output contract, safety rules |
+| [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | Image generation and editing — Gemini and OpenAI |
+| [`yummy-gen-video`](./skills/yummy-gen-video/SKILL.md) | Text-to-video, image-to-video, reference-guided video — Gemini Veo |
+| [`yummy-gen-voice`](./skills/yummy-gen-voice/SKILL.md) | Single-speaker TTS, multi-speaker dialogue, voice listing — Gemini TTS |
 
 ### Installation
 
@@ -485,80 +457,84 @@ Skills are located in [`./skills/`](./skills/).
 npx skills add yummysource/yummycli -y -g
 ```
 
-Load `yummy-shared` before any other yummycli skill.
-
 ---
 
 ## Command Reference
 
 ```
 yummycli
-├── version                              Show the yummycli version
+├── version                                     Show the yummycli version
+│
+├── init  --provider  [--api-key]  [--default]  Configure a provider API key
+│         --provider   gemini or openai (required)
+│         --api-key    API key (required if not already stored)
+│         --default    Set this provider as the default
 │
 ├── auth
-│   ├── init    --provider  --api-key    Save API key for a provider
-│   ├── list                             List all providers and credential status
-│   ├── status  --provider               Show credential status for a provider
-│   └── remove  --provider               Delete stored credentials
+│   ├── list                                    List providers, status, and default
+│   ├── status  --provider                      Show credential status
+│   └── remove  --provider                      Delete stored credentials
 │
 ├── gemini
-│   ├── init  --api-key                  Initialize Gemini credentials
-│   ├── nanobanana                       Generate / edit images with Gemini
-│   │     --prompt        (required)
+│   ├── init  --api-key  [--default]            Initialize Gemini credentials
+│   ├── nanobanana                              Generate / edit images with Gemini
+│   │     --prompt         (required)
 │   │     --output
-│   │     --model
-│   │     --aspect-ratio
-│   │     --image-size
-│   │     --input-image   (repeatable)
-│   ├── veo                              Generate videos with Gemini Veo
-│   │     --prompt        (required)
+│   │     --model          default: gemini-3.1-flash-image
+│   │     --aspect-ratio   default: 16:9
+│   │     --image-size     default: 1K
+│   │     --input-image    (repeatable)
+│   ├── veo                                     Generate videos with Gemini Veo
+│   │     --prompt         (required)
 │   │     --output
-│   │     --model
-│   │     --aspect-ratio
-│   │     --duration
-│   │     --resolution
-│   │     --input-image   (repeatable, up to 3)
-│   ├── speak                            Synthesise speech with Gemini TTS
-│   │     --text          (required)
+│   │     --model          default: veo-3.1-fast-generate-preview
+│   │     --aspect-ratio   default: 16:9
+│   │     --duration       default: 8
+│   │     --resolution     default: 1080p
+│   │     --input-image    (repeatable, up to 3)
+│   ├── speak                                   Synthesise speech with Gemini TTS
+│   │     --text           (required)
 │   │     --output
-│   │     --model
-│   │     --voice
+│   │     --model          default: gemini-3.1-flash-tts-preview
+│   │     --voice          default: Aoede
 │   │     --language
-│   │     --speaker       (repeatable, up to 2; mutually exclusive with --voice)
-│   └── voices                           List available Gemini TTS voices
+│   │     --speaker        (repeatable, up to 2; mutually exclusive with --voice)
+│   └── voices                                  List available Gemini TTS voices
 │
 ├── image
-│   └── generate                         Provider-agnostic image generation
-│         --provider      (required)
-│         --prompt        (required)
+│   └── generate                                Generate or edit an image
+│         --prompt         (required)
+│         --provider       uses config default if omitted
 │         --output
 │         --model
-│         --aspect-ratio
-│         --image-size
-│         --input-image   (repeatable)
+│         --aspect-ratio   Gemini only
+│         --image-size     Gemini: 1K/2K/4K — OpenAI: WxH e.g. 1536x864
+│         --quality        OpenAI only: low/medium/high/auto
+│         --output-format  OpenAI only: png/jpeg/webp
+│         --input-image    (repeatable)
 │
 ├── video
-│   └── generate                         Provider-agnostic video generation
-│         --provider      (required)
-│         --prompt        (required)
+│   └── generate                                Generate a video (Gemini only)
+│         --provider       (required)
+│         --prompt         (required)
 │         --output
 │         --model
 │         --aspect-ratio
 │         --duration
 │         --resolution
-│         --input-image   (repeatable, up to 3)
+│         --input-image    (repeatable, up to 3)
 │
 └── audio
-    ├── speak                            Provider-agnostic speech synthesis
-    │     --provider      (required)
-    │     --text          (required)
+    ├── speak                                   Synthesise speech (Gemini only)
+    │     --provider       (required)
+    │     --text           (required)
     │     --output
     │     --model
     │     --voice
     │     --language
-    │     --speaker       (repeatable, up to 2; mutually exclusive with --voice)
-    └── voices                           List available voices for a provider
-          --provider      (required)
+    │     --speaker        (repeatable, up to 2; mutually exclusive with --voice)
+    └── voices                                  List available voices
+          --provider       (required)
 ```
 
 ---
