@@ -55,7 +55,59 @@ func newCmdImageGenerate(f *cmdutil.Factory) *cobra.Command {
 
 	command := &cobra.Command{
 		Use:   "generate",
-		Short: "Generate an image",
+		Short: "Generate or edit an image",
+		Long: `Generate or edit an image using Gemini or OpenAI.
+
+Provider is resolved from config when --provider is omitted.
+Run "yummycli init --provider <name> --api-key <key> --default" to set a default provider.
+
+PROVIDERS
+  gemini   Google Gemini image generation (gemini-3.1-flash-image by default)
+  openai   OpenAI image generation (gpt-image-2 by default)
+
+GEMINI FLAGS
+  --aspect-ratio   Output aspect ratio.
+                   Supported: 1:1 1:4 1:8 2:3 3:2 3:4 4:1 4:3 4:5 5:4 8:1 9:16 16:9 21:9
+                   Default: 16:9
+  --image-size     Output resolution.
+                   Supported: 512 0.5K 1K 2K 4K
+                   Default: 1K
+                   Note: 512 and 0.5K are gemini-3.1-flash-image only.
+
+OPENAI FLAGS
+  --image-size     Output dimensions (W x H, both must be multiples of 16).
+                   Presets: 1536x864 (16:9, default) 1024x576 2048x1152
+                            1024x1024 (square) 1536x1024 1024x1536
+  --quality        Rendering quality: low | medium | high | auto
+                   Default: API auto
+  --output-format  Output file format: png | jpeg | webp
+                   Default: png
+                   Note: jpeg significantly reduces file size vs png.
+
+MODELS
+  gemini   gemini-3.1-flash-image (default), gemini-3-pro-image-preview
+  openai   gpt-image-2 (default), gpt-5.5
+           Unknown models trigger a warning and fall back to gpt-image-2.
+
+IMAGE EDITING
+  Pass one or more --input-image flags to edit existing images instead of generating from scratch.
+  Gemini: prompt + input images → multimodal edit (up to many images)
+  OpenAI: prompt + input images → /images/edits endpoint (multipart upload)`,
+		Example: `  # Text-to-image (uses configured default provider)
+  yummycli image generate --prompt "a sunset over the ocean"
+
+  # Gemini with explicit aspect ratio
+  yummycli image generate --provider gemini --prompt "city skyline" --aspect-ratio 21:9 --image-size 4K
+
+  # OpenAI 16:9 JPEG
+  yummycli image generate --provider openai --prompt "a rabbit" --output-format jpeg
+
+  # Edit an existing image (Gemini)
+  yummycli image generate --provider gemini --prompt "make it watercolor" --input-image ./photo.png
+
+  # Multi-image compositing (Gemini)
+  yummycli image generate --provider gemini --prompt "blend these" \
+    --input-image ./a.png --input-image ./b.png`,
 		Annotations: map[string]string{
 			"capability": "image.generate",
 		},
@@ -64,16 +116,15 @@ func newCmdImageGenerate(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	command.Flags().StringVar(&opts.Provider, "provider", "", "model provider (e.g. gemini)")
-	command.Flags().StringVar(&opts.Prompt, "prompt", "", "image generation prompt")
-	command.Flags().StringVar(&opts.Output, "output", "", "output image path")
-	command.Flags().StringVar(&opts.Model, "model", "", "model name")
-	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", "", "image aspect ratio")
-	command.Flags().StringVar(&opts.ImageSize, "image-size", "", "image size")
-	command.Flags().StringVar(&opts.Quality, "quality", "", "image quality (openai: low, medium, high, auto)")
-	command.Flags().StringVar(&opts.Style, "style", "", "image style (openai: vivid or natural)")
-	command.Flags().StringVar(&opts.OutputFormat, "output-format", "", "output format (openai: png, jpeg, webp)")
-	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "input image path (repeatable)")
+	command.Flags().StringVar(&opts.Provider, "provider", "", "provider: gemini or openai (uses configured default if omitted)")
+	command.Flags().StringVar(&opts.Prompt, "prompt", "", "image generation or editing prompt")
+	command.Flags().StringVar(&opts.Output, "output", "", "output file path (auto-generated if omitted)")
+	command.Flags().StringVar(&opts.Model, "model", "", "model name (see MODELS in --help)")
+	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", "", "gemini: output aspect ratio, e.g. 16:9 (default), 9:16, 1:1")
+	command.Flags().StringVar(&opts.ImageSize, "image-size", "", "gemini: 1K/2K/4K (default 1K) | openai: WxH e.g. 1536x864 (default)")
+	command.Flags().StringVar(&opts.Quality, "quality", "", "openai: rendering quality — low | medium | high | auto")
+	command.Flags().StringVar(&opts.OutputFormat, "output-format", "", "openai: output format — png (default) | jpeg | webp")
+	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "input image path for editing; repeat for multiple (e.g. --input-image a.png --input-image b.png)")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)

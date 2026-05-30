@@ -70,7 +70,39 @@ func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
 
 	command := &cobra.Command{
 		Use:   "nanobanana",
-		Short: "Generate images with Gemini Nano Banana",
+		Short: "Generate or edit images with Gemini",
+		Long: `Shortcut for "yummycli image generate --provider gemini" with Gemini defaults pre-filled.
+
+DEFAULTS
+  --model        gemini-3.1-flash-image
+  --aspect-ratio 16:9
+  --image-size   1K
+
+ASPECT RATIO
+  Supported: 1:1 1:4 1:8 2:3 3:2 3:4 4:1 4:3 4:5 5:4 8:1 9:16 16:9 21:9
+
+IMAGE SIZE
+  Supported: 512 0.5K 1K 2K 4K
+  Note: 512 and 0.5K are gemini-3.1-flash-image only.
+
+MODELS
+  gemini-3.1-flash-image   (default) fast, supports all aspect ratios and 512/0.5K sizes
+  gemini-3-pro-image-preview  higher quality; aspect ratios: 1:1 2:3 3:2 3:4 4:3 4:5 5:4 9:16 16:9 21:9
+
+IMAGE EDITING
+  Pass --input-image to edit an existing image instead of generating from scratch.`,
+		Example: `  # Text-to-image with defaults (16:9, 1K)
+  yummycli gemini nanobanana --prompt "a panda eating bamboo"
+
+  # Widescreen 4K
+  yummycli gemini nanobanana --prompt "city skyline at night" --aspect-ratio 21:9 --image-size 4K
+
+  # Edit an image
+  yummycli gemini nanobanana --prompt "make it watercolor style" --input-image ./photo.png
+
+  # Multi-image compositing
+  yummycli gemini nanobanana --prompt "blend into one scene" \
+    --input-image ./subject.png --input-image ./background.jpg`,
 		Annotations: map[string]string{
 			"canonical": "image generate --provider " + providers.Gemini + " --preset nano-banana",
 		},
@@ -79,12 +111,12 @@ func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
 		},
 	}
 
-	command.Flags().StringVar(&opts.Prompt, "prompt", "", "Image generation prompt")
-	command.Flags().StringVar(&opts.Output, "output", "", "Output image path")
-	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model")
-	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "Gemini image aspect-ratio")
-	command.Flags().StringVar(&opts.ImageSize, "image-size", opts.ImageSize, "Gemini image size")
-	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "Gemini input image path")
+	command.Flags().StringVar(&opts.Prompt, "prompt", "", "image generation or editing prompt")
+	command.Flags().StringVar(&opts.Output, "output", "", "output file path (auto-generated if omitted)")
+	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model (default: gemini-3.1-flash-image)")
+	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "output aspect ratio (default: 16:9)")
+	command.Flags().StringVar(&opts.ImageSize, "image-size", opts.ImageSize, "output resolution: 512 | 0.5K | 1K | 2K | 4K (default: 1K)")
+	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "input image path for editing; repeat for multiple")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
 		panic(err)

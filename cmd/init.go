@@ -27,6 +27,23 @@ func NewCmdInit(f *cmdutil.Factory) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "init",
 		Short: "Configure a provider API key",
+		Long: `Save an API key for a provider and optionally set it as the default.
+
+PROVIDERS
+  gemini   Google Gemini (image, video, speech)
+  openai   OpenAI (image only)
+
+The --default flag sets this provider as the one used when --provider is
+omitted from generation commands. If two providers are configured, the
+non-default provider acts as automatic fallback when the primary fails.`,
+		Example: `  # Set Gemini as the default provider
+  yummycli init --provider gemini --api-key <key> --default
+
+  # Add OpenAI as a fallback (Gemini remains default)
+  yummycli init --provider openai --api-key <key>
+
+  # Switch default to OpenAI
+  yummycli init --provider openai --api-key <key> --default`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit(f, opts)
 		},
