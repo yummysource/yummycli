@@ -336,16 +336,61 @@ func TestImageGenerateRejectsUnsupportedOpenAISize(t *testing.T) {
 		"--provider", providers.OpenAI,
 		"--prompt", "a cat",
 		"--output", "out.png",
-		"--image-size", "512x512",
+		"--image-size", "999x100", // not multiples of 16
 	})
 
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error for unsupported openai size")
+		t.Fatal("expected error for invalid openai size")
 	}
-	want := "unsupported image size for openai: 512x512"
-	if err.Error() != want {
-		t.Fatalf("error = %q, want %q", err.Error(), want)
+	if !strings.Contains(err.Error(), "multiples of 16") {
+		t.Fatalf("error = %q, want multiples-of-16 message", err.Error())
+	}
+}
+
+func TestImageGenerateAcceptsOpenAI219Size(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	generator := &fakeImageGenerator{}
+	f := newImageGenerateFactory(stdout, stderr, generator)
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.OpenAI,
+		"--prompt", "a cat",
+		"--output", "out.png",
+		"--image-size", "2016x864", // 21:9
+	})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error for valid 21:9 size: %v", err)
+	}
+	if generator.req.ImageSize != "2016x864" {
+		t.Fatalf("image size = %q, want 2016x864", generator.req.ImageSize)
+	}
+}
+
+func TestImageGenerateRejectsOpenAIBadAspectRatio(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	f := newImageGenerateFactory(stdout, stderr, &fakeImageGenerator{})
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.OpenAI,
+		"--prompt", "a cat",
+		"--output", "out.png",
+		"--image-size", "3200x640", // 5:1, exceeds 3:1 limit
+	})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for aspect ratio exceeding 3:1")
+	}
+	if !strings.Contains(err.Error(), "aspect ratio") {
+		t.Fatalf("error = %q, want aspect-ratio message", err.Error())
 	}
 }
 

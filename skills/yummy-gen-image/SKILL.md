@@ -55,8 +55,8 @@ yummycli image generate \
 | `--provider` | Override the configured default (`gemini`, `openai`) |
 | `--model` | Specific model name |
 | `--output` | Output file path (auto-generated if omitted) |
-| `--aspect-ratio` | Gemini only: e.g. `16:9`, `9:16`, `1:1` |
-| `--image-size` | Gemini: `1K` `2K` `4K` — OpenAI: `1536x864` `1024x1024` `1536x1024` `1024x1536` |
+| `--aspect-ratio` | Gemini only: named ratio e.g. `16:9`, `21:9`, `9:16`, `1:1` |
+| `--image-size` | Gemini: `1K` `2K` `4K` — OpenAI: WxH e.g. `1536x864` (both dims multiples of 16) |
 | `--quality` | OpenAI only: `low` `medium` `high` `auto` |
 | `--output-format` | OpenAI only: `png` (default) `jpeg` `webp` |
 | `--input-image` | Input image path for editing; repeat for multiple images |
@@ -93,17 +93,27 @@ Supported models: `gpt-image-2` (default), `gpt-5.5`
 
 ## Intent to Parameters
 
-**Aspect-ratio guidance (Gemini only):**
-- Vertical / portrait / phone wallpaper → `--aspect-ratio 9:16`
-- Widescreen / horizontal / desktop → `--aspect-ratio 16:9`
-- Square / avatar → `--aspect-ratio 1:1`
-- User provides a specific ratio → pass through directly
-- Shape unclear → omit
+### Aspect ratio
 
-**Image-size guidance (OpenAI):**
-- Landscape / horizontal → `--image-size 1536x864` (default, 16:9)
-- Portrait / vertical → `--image-size 1024x1536`
-- Square → `--image-size 1024x1024`
+Both providers support aspect ratio — Gemini via `--aspect-ratio`, OpenAI via `--image-size` (WxH, both dims multiples of 16).
+
+When the user states a ratio, use the **configured default provider** and translate accordingly:
+
+| User intent | Gemini | OpenAI |
+|---|---|---|
+| Ultrawide / cinematic (21:9) | `--aspect-ratio 21:9` | `--image-size 2016x864` |
+| Widescreen / landscape (16:9) | `--aspect-ratio 16:9` | `--image-size 1536x864` (default) |
+| Standard landscape (4:3) | `--aspect-ratio 4:3` | `--image-size 1024x768` |
+| Square (1:1) | `--aspect-ratio 1:1` | `--image-size 1024x1024` |
+| Portrait (3:4) | `--aspect-ratio 3:4` | `--image-size 768x1024` |
+| Vertical / portrait (9:16) | `--aspect-ratio 9:16` | `--image-size 864x1536` |
+
+Do NOT switch providers just because a ratio was requested — both providers handle all common ratios.
+
+**Image-size guidance (OpenAI, when user specifies a size rather than a ratio):**
+- User says "larger" or "high-res" → `--image-size 2048x1152`
+- User says "smaller" or "draft" → `--image-size 1024x576`
+- Otherwise → omit, use default (`1536x864`)
 
 **Output format guidance (OpenAI):**
 - User asks for JPEG or smaller file size → `--output-format jpeg`

@@ -77,9 +77,15 @@ GEMINI FLAGS
                    Note: 512 and 0.5K are gemini-3.1-flash-image only.
 
 OPENAI FLAGS
-  --image-size     Output dimensions (W x H, both must be multiples of 16).
-                   Presets: 1536x864 (16:9, default) 1024x576 2048x1152
-                            1024x1024 (square) 1536x1024 1024x1536
+  --image-size     Output dimensions in WxH format. Both must be multiples of 16.
+                   Aspect ratio must be between 1:3 and 3:1.
+                   Common presets by ratio:
+                     21:9  → 2016x864
+                     16:9  → 1536x864 (default)
+                     4:3   → 1024x768
+                     1:1   → 1024x1024
+                     3:4   → 768x1024
+                     9:16  → 864x1536
   --quality        Rendering quality: low | medium | high | auto
                    Default: API auto
   --output-format  Output file format: png | jpeg | webp
@@ -261,23 +267,21 @@ func validateOpenAIOutputFormat(format string) error {
 	return fmt.Errorf("unsupported output format for openai: %s (supported: png, jpeg, webp)", format)
 }
 
-// validateOpenAISize checks that the size is a known OpenAI image size.
+// validateOpenAISize checks that size satisfies gpt-image-2 constraints:
+// WxH format, both dimensions positive multiples of 16, aspect ratio between 1:3 and 3:1.
 func validateOpenAISize(size string) error {
-	valid := []string{
-		"1536x864",            // 16:9 default
-		"1024x576",            // 16:9 smaller
-		"2048x1152",           // 16:9 larger
-		"1024x1024",           // square
-		"1536x1024",           // 3:2 landscape
-		"1024x1536",           // 2:3 portrait
-		"1024x1792", "1792x1024", // dall-e-3
+	var w, h int
+	if _, err := fmt.Sscanf(size, "%dx%d", &w, &h); err != nil || w <= 0 || h <= 0 {
+		return fmt.Errorf("invalid image size %q: use WxH format, e.g. 1536x864", size)
 	}
-	for _, v := range valid {
-		if v == size {
-			return nil
-		}
+	if w%16 != 0 || h%16 != 0 {
+		return fmt.Errorf("invalid image size %q: width and height must both be multiples of 16", size)
 	}
-	return fmt.Errorf("unsupported image size for openai: %s", size)
+	ratio := float64(w) / float64(h)
+	if ratio < 1.0/3.0 || ratio > 3.0 {
+		return fmt.Errorf("invalid image size %q: aspect ratio must be between 1:3 and 3:1", size)
+	}
+	return nil
 }
 
 // resolveProviderFallback returns the first configured provider that is not the primary.
