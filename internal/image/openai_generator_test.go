@@ -3,10 +3,12 @@ package image
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/yummysource/yummycli/internal/auth"
@@ -40,9 +42,10 @@ func (s *memorySecretStore) Delete(service, account string) error {
 	return nil
 }
 
-// newOpenAITestServer returns a test server that serves:
-//   - POST /  → JSON with a url pointing back to the server's /image path
-//   - GET /image → the provided imageData bytes
+// newOpenAITestServer returns a test server handling:
+//   - POST /images/generations → JSON response with image URL
+//   - POST /images/edits       → JSON response with image URL
+//   - GET  /image              → imageData bytes
 func newOpenAITestServer(t *testing.T, imageData []byte) *httptest.Server {
 	t.Helper()
 	var srv *httptest.Server
@@ -69,7 +72,7 @@ func TestOpenAIGeneratorRejectsNonOpenAIProvider(t *testing.T) {
 		Provider: providers.Gemini,
 		Prompt:   "a cat",
 		Output:   "out.png",
-		Model:    "dall-e-3",
+		Model:    "gpt-image-2",
 	})
 	if err == nil {
 		t.Fatal("expected error for non-openai provider")
@@ -94,10 +97,8 @@ func TestOpenAIGeneratorWritesImageFile(t *testing.T) {
 		Provider:  providers.OpenAI,
 		Prompt:    "a cat",
 		Output:    outPath,
-		Model:     "dall-e-3",
+		Model:     "gpt-image-2",
 		ImageSize: "1024x1024",
-		Quality:   "standard",
-		Style:     "vivid",
 	})
 	if err != nil {
 		t.Fatalf("GenerateImage returned error: %v", err)
@@ -109,6 +110,66 @@ func TestOpenAIGeneratorWritesImageFile(t *testing.T) {
 	}
 	if string(got) != string(fakeBytes) {
 		t.Fatalf("file contents = %q, want %q", got, fakeBytes)
+	}
+}
+
+func TestOpenAIGeneratorEditsImageWithInputFile(t *testing.T) {
+	fakeBytes := []byte("edited-image-data")
+
+	var capturedPath string
+	var capturedBody []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "image/png")
+			w.Write(fakeBytes)
+			return
+		}
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		var srv2 *httptest.Server
+		_ = srv2
+		json.NewEncoder(w).Encode(map[string]any{
+			"data": []map[string]string{{"b64_json": "ZWRpdGVkLWltYWdlLWRhdGE="}}, // base64("edited-image-data")
+		})
+	}))
+	defer srv.Close()
+
+	secretStore := newMemorySecretStore()
+	_ = secretStore.Set("yummycli", "provider:openai:api_key", "test-key")
+	store := auth.NewProviderCredentialStore(secretStore)
+
+	g := NewOpenAIGenerator(store, srv.URL)
+
+	dir := t.TempDir()
+	inputPath := filepath.Join(dir, "source.png")
+	_ = os.WriteFile(inputPath, []byte("input-image"), 0o644)
+	outPath := filepath.Join(dir, "out.png")
+
+	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+		Provider:    providers.OpenAI,
+		Prompt:      "make it look like a watercolor",
+		Output:      outPath,
+		Model:       "gpt-image-2",
+		InputImages: []string{inputPath},
+	})
+	if err != nil {
+		t.Fatalf("GenerateImage returned error: %v", err)
+	}
+
+	if !strings.HasSuffix(capturedPath, "/images/edits") {
+		t.Fatalf("expected edits endpoint, got path %q", capturedPath)
+	}
+	if !strings.Contains(string(capturedBody), "source.png") {
+		t.Fatalf("expected input image filename in request body")
+	}
+
+	got, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("ReadFile returned error: %v", err)
+	}
+	if string(got) != "edited-image-data" {
+		t.Fatalf("file contents = %q, want %q", got, "edited-image-data")
 	}
 }
 
@@ -131,7 +192,7 @@ func TestOpenAIGeneratorReturnsErrorOnAPIError(t *testing.T) {
 		Provider: providers.OpenAI,
 		Prompt:   "a cat",
 		Output:   "out.png",
-		Model:    "dall-e-3",
+		Model:    "gpt-image-2",
 	})
 	if err == nil {
 		t.Fatal("expected error for API error response")
