@@ -31,26 +31,39 @@ Video and speech require Gemini. Configure Gemini first if you need these capabi
 
 ## First-Time Setup
 
-Check which providers are configured:
+Check which providers are configured and which is the default:
 
 ```bash
 yummycli auth list
 ```
 
-If no provider is configured, initialize one:
-
-```bash
-# Gemini
-yummycli init --provider gemini --api-key "<key>" --default
-
-# OpenAI
-yummycli init --provider openai --api-key "<key>" --default
+Example output:
+```json
+[
+  {"provider":"gemini","configured":true,"default":true,"apiKeyPreview":"AIza******g7Aw"},
+  {"provider":"openai","configured":true,"default":false,"apiKeyPreview":"sk-p******mEAA"}
+]
 ```
 
-Add a second provider as fallback (omit --default to keep existing default):
+- `configured: true` — API key is stored
+- `default: true` — this provider is used when `--provider` is omitted
+
+**Initialize a new provider** (first time, API key required):
+
+```bash
+yummycli init --provider gemini --api-key "<key>" --default
+```
+
+**Add a second provider as fallback** (existing default unchanged):
 
 ```bash
 yummycli init --provider openai --api-key "<key>"
+```
+
+**Switch the default** (key already stored, no need to re-enter it):
+
+```bash
+yummycli init --provider openai --default
 ```
 
 ## Output Contract
