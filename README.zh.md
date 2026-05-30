@@ -6,7 +6,7 @@
 
 面向多模态模型供应商的 AI 友好命令行工具 —— 专为人类用户和 AI Agent 设计。
 
-当前支持通过 [Gemini](https://deepmind.google/technologies/gemini/) 进行图像生成与编辑、视频生成和语音合成，Claude、OpenAI、Qwen 等供应商支持正在规划中。
+支持通过 **Gemini** 和 **OpenAI** 进行图像生成与编辑，以及通过 Gemini 进行视频生成和语音合成。
 
 [繁體中文](./README.zh-TW.md) | [简体中文](./README.zh.md) | [English](./README.md)
 
@@ -22,7 +22,7 @@
 - **能力优先架构** —— `image generate`、`video generate` 和 `audio speak` 是稳定的自动化接口；`gemini nanobanana`、`gemini veo` 和 `gemini speak` 是其上层的人性化快捷方式
 - **结构化 JSON 输出** —— 每条命令将结果写入 stdout，方便 Agent、脚本和其他工具直接消费
 - **安全的凭证存储** —— API Key 存储在操作系统原生密钥链（macOS Keychain、Linux Secret Service），从不以明文保存
-- **供应商无关** —— 统一的 CLI 接口，新增供应商时无需修改现有脚本
+- **多供应商自动降级** —— 配置两个供应商后，主供应商失败时自动切换到另一个
 
 ---
 
@@ -66,122 +66,156 @@ npx skills add yummysource/yummycli -y -g
 
 yummycli 将每个供应商的 API Key 存储在操作系统密钥链中，每个供应商只需配置一次。
 
-### 命令
+### 供应商覆盖范围
+
+| 能力 | Gemini | OpenAI |
+|---|---|---|
+| 图像生成与编辑 | ✅ | ✅ |
+| 视频生成 | ✅ | — |
+| 语音合成 | ✅ | — |
+
+### 快速配置
+
+```bash
+# 配置主供应商并设为默认
+yummycli init --provider gemini --api-key "AIza..." --default
+
+# 可选：添加第二个供应商作为降级备选
+yummycli init --provider openai --api-key "sk-..."
+```
+
+配置两个供应商后，主供应商失败时自动使用另一个。
+
+### 查看配置状态
+
+```bash
+yummycli auth list
+```
+
+```json
+[
+  {"provider":"gemini","configured":true,"default":true,"apiKeyPreview":"AIbc******9z3G"},
+  {"provider":"openai","configured":true,"default":false,"apiKeyPreview":"sk-k******aFZe"}
+]
+```
+
+`"default": true` 表示省略 `--provider` 时使用的供应商。
+
+### 切换默认供应商
+
+```bash
+# Key 已存储时无需重新输入
+yummycli init --provider openai --default
+```
+
+### 其他认证命令
 
 | 命令 | 说明 |
 |------|------|
-| `auth init` | 保存供应商的 API Key |
-| `auth list` | 列出所有供应商及其凭证状态 |
-| `auth status` | 查看指定供应商的凭证状态 |
-| `auth remove` | 删除指定供应商的凭证 |
-
-### 示例
-
-```bash
-# 保存 Gemini API Key
-yummycli auth init --provider gemini --api-key "AIza..."
-
-# 查看 Gemini 是否已配置（显示脱敏预览）
-yummycli auth status --provider gemini
-
-# 删除 Gemini 凭证
-yummycli auth remove --provider gemini
-```
-
-**`auth init` 输出：**
-
-```json
-{"provider":"gemini","configured":true}
-```
-
-**`auth list` 输出：**
-
-```json
-[{"provider":"gemini","configured":true,"apiKeyPreview":"AIza...xxxx"}]
-```
-
-**`auth status` 输出：**
-
-```json
-{"provider":"gemini","configured":true,"apiKeyPreview":"AIza...xxxx"}
-```
+| `yummycli init --provider <name> --api-key <key> [--default]` | 保存 API Key，可选设为默认 |
+| `yummycli auth list` | 列出所有供应商、凭证状态及默认值 |
+| `yummycli auth status --provider <name>` | 查看指定供应商的凭证状态 |
+| `yummycli auth remove --provider <name>` | 删除指定供应商的凭证 |
 
 ### Gemini 快捷方式
 
-`gemini init` 是 `auth init --provider gemini` 的等价快捷命令：
+`gemini init` 是 `init --provider gemini` 的等价快捷命令：
 
 ```bash
-yummycli gemini init --api-key "AIza..."
+yummycli gemini init --api-key "AIza..." --default
 ```
 
 ---
 
 ## 图像生成
 
-yummycli 提供两个等价的图像生成入口：
+图像生成支持 **Gemini** 和 **OpenAI**。供应商从配置中自动解析，无需每次指定。
+
+| 供应商 | 默认模型 | 默认尺寸 |
+|---|---|---|
+| Gemini | `gemini-3.1-flash-image` | `16:9`，`1K` |
+| OpenAI | `gpt-image-2` | `1536x864`（16:9） |
+
+两个等价入口：
 
 | 入口 | 适用场景 |
 |------|----------|
-| `gemini nanobanana` | 人工使用 —— 已预设 Gemini 默认参数 |
-| `image generate --provider gemini` | 自动化/脚本 —— 显式、稳定的接口 |
-
-两者调用相同的底层实现，按使用场景选择即可。
+| `yummycli image generate` | 所有供应商 —— 使用配置的默认供应商 |
+| `yummycli gemini nanobanana` | Gemini 快捷方式，预设默认参数 |
 
 ### 快速开始
 
 ```bash
-# 第一步：配置 Gemini 凭证（一次性）
-yummycli gemini init --api-key "AIza..."
+# 第一步：配置供应商（一次性）
+yummycli init --provider gemini --api-key "AIza..." --default
+yummycli init --provider openai --api-key "sk-..."   # 可选降级备选
 
-# 第二步：根据文本提示生成图像
-yummycli gemini nanobanana --prompt "白色盘子上放着一根成熟的香蕉，工作室打光"
-```
-
-生成的图像保存在当前目录，文件名自动生成：
-
-```
-gemini_20260410123456_789.png
+# 第二步：生成图像（使用默认供应商）
+yummycli image generate --prompt "白色盘子上放着一根成熟的香蕉，工作室打光"
 ```
 
 ### 参数说明
 
-| 参数 | 说明 | 默认值（Gemini） |
-|------|------|----------------|
-| `--prompt` | 图像生成提示词（**必填**） | — |
-| `--output` | 输出文件路径 | 自动生成 |
-| `--model` | Gemini 模型 | `gemini-3.1-flash-image-preview` |
-| `--aspect-ratio` | 图像宽高比 | `16:9` |
-| `--image-size` | 输出分辨率 | `1K` |
-| `--input-image` | 输入图像（可重复使用） | — |
+**通用参数（两个供应商均支持）：**
 
-> `image generate` 使用时需额外传入 `--provider gemini`（必填）。Gemini 默认值同样适用 —— 省略时 `--model`、`--aspect-ratio`、`--image-size` 均自动填充。
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--prompt` | 图像生成或编辑提示词（**必填**） | — |
+| `--provider` | 覆盖供应商（`gemini` 或 `openai`） | 从配置读取 |
+| `--model` | 模型名称 | 供应商默认值 |
+| `--output` | 输出文件路径 | 自动生成 |
+| `--input-image` | 编辑用输入图像（可重复） | — |
+
+**Gemini 专属参数：**
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--aspect-ratio` | 命名比例：`16:9`、`9:16`、`21:9`、`1:1` 等 | `16:9` |
+| `--image-size` | 分辨率：`512`、`0.5K`、`1K`、`2K`、`4K` | `1K` |
+
+**OpenAI 专属参数：**
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--image-size` | 尺寸（WxH 格式，两边均为 16 的倍数，比例 1:3 到 3:1） | `1536x864` |
+| `--quality` | 渲染质量：`low`、`medium`、`high`、`auto` | API 自动 |
+| `--output-format` | 输出格式：`png`、`jpeg`、`webp` | `png` |
 
 ### 文本生成图像
 
 ```bash
-yummycli gemini nanobanana \
-  --prompt "赛博朋克夜晚都市，霓虹灯倒映在湿漉漉的街道上"
+# 使用配置的默认供应商
+yummycli image generate --prompt "赛博朋克夜晚都市，霓虹灯倒映在街道上"
 
-# 指定输出路径和分辨率
-yummycli gemini nanobanana \
-  --prompt "极简主义 logo，扁平设计，白色背景" \
-  --output logo.png \
-  --image-size 4K
+# 指定 Gemini，4K 分辨率
+yummycli image generate --provider gemini \
+  --prompt "极简主义 logo，扁平设计" \
+  --image-size 4K --output logo.png
+
+# 指定 OpenAI，JPEG 输出
+yummycli image generate --provider openai \
+  --prompt "木桌上的一只白兔" \
+  --output-format jpeg
 ```
 
 ### 图像编辑
 
-通过 `--input-image` 传入一张或多张参考图像：
+通过 `--input-image` 传入参考图像，两个供应商均支持编辑。
 
 ```bash
-# 单图编辑
-yummycli gemini nanobanana \
+# 单图编辑（Gemini）
+yummycli image generate --provider gemini \
   --prompt "将这张图转换为水彩插画风格" \
   --input-image ./photo.png
 
-# 多图参考
-yummycli gemini nanobanana \
-  --prompt "将这两张参考图融合为一张精致的海报插画" \
+# 单图编辑（OpenAI）
+yummycli image generate --provider openai \
+  --prompt "在背景中添加一道彩虹" \
+  --input-image ./photo.png
+
+# 多图合成（Gemini）
+yummycli image generate --provider gemini \
+  --prompt "将这两张参考图融合为一张海报" \
   --input-image ./subject.png \
   --input-image ./background.jpg
 ```
@@ -190,116 +224,83 @@ yummycli gemini nanobanana \
 
 ### 宽高比
 
-```bash
-# 竖版 —— 手机壁纸、故事格式
-yummycli gemini nanobanana --prompt "..." --aspect-ratio 9:16
+两个供应商默认均为 16:9。指定其他比例：
 
-# 正方形 —— 社交头像、图标
-yummycli gemini nanobanana --prompt "..." --aspect-ratio 1:1
-
-# 宽屏 —— 桌面壁纸、横幅
-yummycli gemini nanobanana --prompt "..." --aspect-ratio 21:9
-```
+| 比例 | Gemini 参数 | OpenAI 参数 |
+|---|---|---|
+| 21:9 超宽 | `--aspect-ratio 21:9` | `--image-size 2016x864` |
+| 16:9 宽屏 | `--aspect-ratio 16:9` | `--image-size 1536x864` |
+| 1:1 正方形 | `--aspect-ratio 1:1` | `--image-size 1024x1024` |
+| 9:16 竖版 | `--aspect-ratio 9:16` | `--image-size 864x1536` |
 
 ### 模型选择
 
+**Gemini：**
 ```bash
-# Flash（默认）—— 速度更快，支持更多宽高比和更小尺寸
-yummycli gemini nanobanana --prompt "..." --model gemini-3.1-flash-image-preview
+# Flash（默认）—— 速度更快，支持更多比例和尺寸
+yummycli image generate --provider gemini --prompt "..." --model gemini-3.1-flash-image
 
-# Pro —— 质量更高，支持的尺寸和宽高比选项较少
-yummycli gemini nanobanana --prompt "..." --model gemini-3-pro-image-preview
+# Pro —— 质量更高
+yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image-preview
 ```
 
-### 模型兼容性
+**OpenAI：**
+```bash
+# gpt-image-2（默认）
+yummycli image generate --provider openai --prompt "..."
 
-**宽高比**
+# gpt-5.5
+yummycli image generate --provider openai --prompt "..." --model gpt-5.5
+```
+
+未知 OpenAI 模型名称会触发警告并自动回退到 `gpt-image-2`。
+
+### Gemini 模型兼容性
+
+**宽高比：**
 
 | 模型 | 支持的值 |
 |------|---------|
-| `gemini-3.1-flash-image-preview` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
+| `gemini-3.1-flash-image` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
 | `gemini-3-pro-image-preview` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
 
-`1:4`、`1:8`、`4:1`、`8:1` 仅 Flash 模型支持，Pro 模型不可用。
+`1:4`、`1:8`、`4:1`、`8:1` 仅 Flash 模型支持。
 
-**图像尺寸**
+**图像尺寸：**
 
 | 模型 | 支持的值 |
 |------|---------|
-| `gemini-3.1-flash-image-preview` | `512` `0.5K` `1K` `2K` `4K` |
+| `gemini-3.1-flash-image` | `512` `0.5K` `1K` `2K` `4K` |
 | `gemini-3-pro-image-preview` | `1K` `2K` `4K` |
 
-`512` 和 `0.5K` 仅 Flash 模型支持。尺寸值大小写不敏感（`4k` 和 `4K` 均可）。
+`512` 和 `0.5K` 仅 Flash 模型支持。
 
 ### JSON 输出
-
-每次成功生成后向 stdout 写入结果：
 
 ```json
 {
   "provider": "gemini",
   "output": "gemini_20260410123456_789.png",
-  "model": "gemini-3.1-flash-image-preview",
+  "model": "gemini-3.1-flash-image",
   "inputImageCount": 0
 }
-```
-
-使用 `output` 字段定位生成的文件。
-
-### 直接使用 `image generate`
-
-`image generate` 是供应商无关的稳定 API，接受相同的参数，但需要显式传入 `--provider`：
-
-```bash
-yummycli image generate \
-  --provider gemini \
-  --prompt "日出时宁静的山中湖泊" \
-  --aspect-ratio 16:9 \
-  --image-size 2K \
-  --output landscape.png
-```
-
-推荐在脚本和 AI Agent 中使用此形式 —— 新增供应商后无需修改。
-
----
-
-### 直接使用 `video generate`
-
-`video generate` 是供应商无关的稳定 API，接受相同的参数，但需要显式传入 `--provider`：
-
-```bash
-yummycli video generate \
-  --provider gemini \
-  --prompt "云朵在山顶缓缓飘过的延时摄影" \
-  --resolution 1080p \
-  --output timelapse.mp4
 ```
 
 ---
 
 ## 视频生成
 
-yummycli 通过 Google Veo 支持视频生成，提供两个等价入口：
+视频生成通过 Google Veo 实现，仅支持 Gemini。
 
 | 入口 | 适用场景 |
 |------|----------|
 | `gemini veo` | 人工使用 —— 已预设 Gemini Veo 默认参数 |
-| `video generate --provider gemini` | 自动化/脚本 —— 显式、稳定的接口 |
+| `video generate --provider gemini` | 自动化/脚本 |
 
 ### 快速开始
 
 ```bash
-# 第一步：配置 Gemini 凭证（一次性）
-yummycli gemini init --api-key "AIza..."
-
-# 第二步：根据文本提示生成视频
 yummycli gemini veo --prompt "阳光明媚的公园里，金毛犬追逐红球"
-```
-
-生成的视频保存在当前目录，文件名自动生成：
-
-```
-veo_20260417_142301_047.mp4
 ```
 
 ### 参数说明
@@ -312,11 +313,9 @@ veo_20260417_142301_047.mp4
 | `--aspect-ratio` | 视频宽高比 | `16:9` |
 | `--duration` | 时长（秒） | `8` |
 | `--resolution` | 视频分辨率 | `1080p` |
-| `--input-image` | 输入图像（可重复使用，最多 3 张） | — |
+| `--input-image` | 输入图像（可重复，最多 3 张） | — |
 
 ### 生成模式
-
-`--input-image` 可重复使用，数量决定生成模式：
 
 | `--input-image` 数量 | 模式 |
 |----------------------|------|
@@ -324,25 +323,9 @@ veo_20260417_142301_047.mp4
 | 1 | 图像生成视频 —— 图像作为起始帧 |
 | 2–3 | 参考图引导 —— 图像作为 ASSET 参考输入 |
 
-```bash
-# 文本生成视频
-yummycli gemini veo --prompt "山顶云海的延时摄影，黄金时段"
-
-# 图像生成视频（为静态图像添加动效）
-yummycli gemini veo \
-  --prompt "小狗向镜头跑来" \
-  --input-image ./dog.jpg
-
-# 参考图引导（两张图）
-yummycli gemini veo \
-  --prompt "将角色融入这个背景环境中" \
-  --input-image ./character.png \
-  --input-image ./background.jpg
-```
-
 ### 模型兼容性
 
-**时长**仅接受离散值：
+**时长**（仅接受离散值）：
 
 | 模型 | 有效时长（秒） |
 |------|--------------|
@@ -350,7 +333,7 @@ yummycli gemini veo \
 | `veo-3.0-*` | 4、6、8 |
 | `veo-3.1-*` | 4、6、8 |
 
-**分辨率**支持情况：
+**分辨率：**
 
 | 模型 | 支持的分辨率 |
 |------|------------|
@@ -358,7 +341,7 @@ yummycli gemini veo \
 | `veo-3.0-*` | `720p`、`1080p` |
 | `veo-3.1-*` | `720p`、`1080p`、`4k` |
 
-约束：`1080p` 和 `4k` 需要 `--duration 8`；`4k` 需要 veo-3.1 系列模型。
+`1080p` 和 `4k` 需要 `--duration 8`；`4k` 需要 veo-3.1 系列模型。
 
 ### JSON 输出
 
@@ -376,33 +359,19 @@ yummycli gemini veo \
 
 ---
 
-
 ## 语音合成
 
-yummycli 通过 Google Gemini TTS 支持语音合成，提供两个等价入口：
+文本转语音通过 Google Gemini TTS 实现，仅支持 Gemini。
 
 | 入口 | 适用场景 |
 |------|----------|
 | `gemini speak` | 人工使用 —— 已预设 Gemini TTS 默认参数 |
-| `audio speak --provider gemini` | 自动化/脚本 —— 显式、稳定的接口 |
+| `audio speak --provider gemini` | 自动化/脚本 |
 
 ### 快速开始
 
 ```bash
-# 合成语音（自动生成文件名）
 yummycli gemini speak --text "你好，这是一段语音合成示例。"
-
-# 指定声音和输出路径
-yummycli gemini speak \
-  --text "欢迎使用 AI 语音合成服务。" \
-  --voice Puck \
-  --output welcome.wav
-```
-
-生成的音频保存在当前目录，文件名自动生成：
-
-```
-tts_20260420_142301_047.wav
 ```
 
 ### 参数说明
@@ -421,26 +390,14 @@ tts_20260420_142301_047.wav
 ### 单说话人合成
 
 ```bash
-# 默认声音（Aoede，轻盈风格）
 yummycli gemini speak --text "今天天气真好！"
 
-# 指定声音和输出
 yummycli gemini speak \
   --text "欢迎来到 AI 的世界。" \
-  --voice Kore \
-  --output greeting.wav
-
-# 明确指定语言
-yummycli gemini speak \
-  --text "Hello, welcome to Gemini TTS." \
-  --voice Puck \
-  --language en-US \
-  --output english.wav
+  --voice Kore --output greeting.wav
 ```
 
 ### 多说话人对话合成
-
-在文本中用 `[名字]:` 标注每位说话人的台词，再用 `--speaker` 映射声音：
 
 ```bash
 yummycli gemini speak \
@@ -460,8 +417,6 @@ yummycli gemini voices
 
 ### JSON 输出
 
-单说话人：
-
 ```json
 {
   "provider": "gemini",
@@ -469,21 +424,6 @@ yummycli gemini voices
   "model": "gemini-3.1-flash-tts-preview",
   "voice": "Aoede",
   "elapsed_seconds": 3
-}
-```
-
-多说话人：
-
-```json
-{
-  "provider": "gemini",
-  "output": "dialogue_20260420_143010_112.wav",
-  "model": "gemini-3.1-flash-tts-preview",
-  "speakers": [
-    {"name": "小明", "voice": "Aoede"},
-    {"name": "小红", "voice": "Kore"}
-  ],
-  "elapsed_seconds": 4
 }
 ```
 
@@ -495,12 +435,10 @@ yummycli 内置 Skills —— 结构化的指令文件，帮助 AI Agent 正确�
 
 | Skill | 说明 |
 |-------|------|
-| [`yummy-shared`](./skills/yummy-shared/SKILL.md) | 凭证检查、输出格式约定和共享安全规则 —— 所有其他 Skill 加载前自动使用 |
-| [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | 通过 Gemini 进行文本生成图像、单图编辑和多图参考编辑 |
-| [`yummy-gen-video`](./skills/yummy-gen-video/SKILL.md) | 通过 Gemini Veo 进行文本生成视频、图像生成视频和参考图引导视频生成 |
-| [`yummy-gen-voice`](./skills/yummy-gen-voice/SKILL.md) | 通过 Gemini TTS 进行单说话人语音合成、多说话人对话合成和声音列表查询 |
-
-Skills 位于 [`./skills/`](./skills/) 目录。
+| [`yummy-shared`](./skills/yummy-shared/SKILL.md) | 初次配置、供应商设置、输出格式约定和安全规则 |
+| [`yummy-gen-image`](./skills/yummy-gen-image/SKILL.md) | 图像生成与编辑 —— Gemini 和 OpenAI |
+| [`yummy-gen-video`](./skills/yummy-gen-video/SKILL.md) | 视频生成 —— Gemini Veo |
+| [`yummy-gen-voice`](./skills/yummy-gen-voice/SKILL.md) | 语音合成 —— Gemini TTS |
 
 ### 安装
 
@@ -508,80 +446,84 @@ Skills 位于 [`./skills/`](./skills/) 目录。
 npx skills add yummysource/yummycli -y -g
 ```
 
-使用任何其他 yummycli Skill 前，请先加载 `yummy-shared`。
-
 ---
 
 ## 命令参考
 
 ```
 yummycli
-├── version                              显示 yummycli 版本
+├── version                                     显示 yummycli 版本
+│
+├── init  --provider  [--api-key]  [--default]  配置供应商 API Key
+│         --provider   gemini 或 openai（必填）
+│         --api-key    API Key（未存储时必填）
+│         --default    设置为默认供应商
 │
 ├── auth
-│   ├── init    --provider  --api-key    保存供应商 API Key
-│   ├── list                             列出所有供应商及凭证状态
-│   ├── status  --provider               查看指定供应商的凭证状态
-│   └── remove  --provider               删除指定供应商的凭证
+│   ├── list                                    列出所有供应商、凭证状态及默认值
+│   ├── status  --provider                      查看指定供应商的凭证状态
+│   └── remove  --provider                      删除指定供应商的凭证
 │
 ├── gemini
-│   ├── init  --api-key                  初始化 Gemini 凭证
-│   ├── nanobanana                       使用 Gemini 生成 / 编辑图像
-│   │     --prompt        （必填）
+│   ├── init  --api-key  [--default]            初始化 Gemini 凭证
+│   ├── nanobanana                              使用 Gemini 生成 / 编辑图像
+│   │     --prompt         （必填）
 │   │     --output
-│   │     --model
-│   │     --aspect-ratio
-│   │     --image-size
-│   │     --input-image   （可重复）
-│   ├── veo                              使用 Gemini Veo 生成视频
-│   │     --prompt        （必填）
+│   │     --model          默认：gemini-3.1-flash-image
+│   │     --aspect-ratio   默认：16:9
+│   │     --image-size     默认：1K
+│   │     --input-image    （可重复）
+│   ├── veo                                     使用 Gemini Veo 生成视频
+│   │     --prompt         （必填）
 │   │     --output
-│   │     --model
-│   │     --aspect-ratio
-│   │     --duration
-│   │     --resolution
-│   │     --input-image   （可重复，最多 3 张）
-│   ├── speak                            使用 Gemini TTS 合成语音
-│   │     --text          （必填）
+│   │     --model          默认：veo-3.1-fast-generate-preview
+│   │     --aspect-ratio   默认：16:9
+│   │     --duration       默认：8
+│   │     --resolution     默认：1080p
+│   │     --input-image    （可重复，最多 3 张）
+│   ├── speak                                   使用 Gemini TTS 合成语音
+│   │     --text           （必填）
 │   │     --output
-│   │     --model
-│   │     --voice
+│   │     --model          默认：gemini-3.1-flash-tts-preview
+│   │     --voice          默认：Aoede
 │   │     --language
-│   │     --speaker       （可重复，最多 2 次；与 --voice 互斥）
-│   └── voices                           列出 Gemini TTS 可用声音
+│   │     --speaker        （可重复，最多 2 次；与 --voice 互斥）
+│   └── voices                                  列出 Gemini TTS 可用声音
 │
 ├── image
-│   └── generate                         供应商无关的图像生成接口
-│         --provider      （必填）
-│         --prompt        （必填）
+│   └── generate                                生成或编辑图像
+│         --prompt         （必填）
+│         --provider       省略时从配置读取
 │         --output
 │         --model
-│         --aspect-ratio
-│         --image-size
-│         --input-image   （可重复）
+│         --aspect-ratio   仅 Gemini
+│         --image-size     Gemini: 1K/2K/4K — OpenAI: WxH 如 1536x864
+│         --quality        仅 OpenAI：low/medium/high/auto
+│         --output-format  仅 OpenAI：png/jpeg/webp
+│         --input-image    （可重复）
 │
 ├── video
-│   └── generate                         供应商无关的视频生成接口
-│         --provider      （必填）
-│         --prompt        （必填）
+│   └── generate                                生成视频（仅 Gemini）
+│         --provider       （必填）
+│         --prompt         （必填）
 │         --output
 │         --model
 │         --aspect-ratio
 │         --duration
 │         --resolution
-│         --input-image   （可重复，最多 3 张）
+│         --input-image    （可重复，最多 3 张）
 │
 └── audio
-    ├── speak                            供应商无关的语音合成接口
-    │     --provider      （必填）
-    │     --text          （必填）
+    ├── speak                                   合成语音（仅 Gemini）
+    │     --provider       （必填）
+    │     --text           （必填）
     │     --output
     │     --model
     │     --voice
     │     --language
-    │     --speaker       （可重复，最多 2 次；与 --voice 互斥）
-    └── voices                           列出指定供应商的可用声音
-          --provider      （必填）
+    │     --speaker        （可重复，最多 2 次；与 --voice 互斥）
+    └── voices                                  列出指定供应商的可用声音
+          --provider       （必填）
 ```
 
 ---
