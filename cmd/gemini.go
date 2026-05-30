@@ -72,6 +72,8 @@ func newCmdGeminiNanoBanana(f *cmdutil.Factory) *cobra.Command {
 		Use:   "nanobanana",
 		Short: "Generate or edit images with Gemini",
 		Long: `Shortcut for "yummycli image generate --provider gemini" with Gemini defaults pre-filled.
+Docs: https://ai.google.dev/gemini-api/docs/image-generation
+
 
 DEFAULTS
   --model        gemini-3.1-flash-image

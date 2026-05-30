@@ -63,7 +63,9 @@ Run "yummycli init --provider <name> --api-key <key> --default" to set a default
 
 PROVIDERS
   gemini   Google Gemini image generation (gemini-3.1-flash-image by default)
+           Docs: https://ai.google.dev/gemini-api/docs/image-generation
   openai   OpenAI image generation (gpt-image-2 by default)
+           Docs: https://developers.openai.com/api/docs/guides/image-generation
 
 GEMINI FLAGS
   --aspect-ratio   Output aspect ratio.
