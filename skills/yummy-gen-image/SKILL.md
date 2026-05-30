@@ -1,6 +1,6 @@
 ---
 name: yummy-gen-image
-version: 2.0.0
+version: 2.1.0
 description: "Use when the user wants to generate or edit raster images through yummycli, including prompt-only generation, single-image editing, and multi-image reference editing. Provider is resolved from yummycli config."
 metadata:
   requires:
@@ -37,7 +37,7 @@ yummycli image generate --prompt "<prompt>"
 
 The provider is resolved automatically from `yummycli` config. Omit `--provider` unless the user explicitly requests a specific provider.
 
-Add reference images when needed:
+Add reference images when needed (triggers image editing mode):
 
 ```bash
 yummycli image generate \
@@ -53,10 +53,11 @@ yummycli image generate \
 | `--provider` | Override the configured default (`gemini`, `openai`) |
 | `--model` | Specific model name |
 | `--output` | Output file path (auto-generated if omitted) |
-| `--aspect-ratio` | Gemini: e.g. `16:9`, `9:16`, `1:1` |
-| `--image-size` | Gemini: `1K` `2K` `4K` — OpenAI: `1024x1024` `1024x1792` `1792x1024` |
-| `--quality` | OpenAI only: `standard` (default) or `hd` |
-| `--style` | OpenAI only: `vivid` (default) or `natural` |
+| `--aspect-ratio` | Gemini only: e.g. `16:9`, `9:16`, `1:1` |
+| `--image-size` | Gemini: `1K` `2K` `4K` — OpenAI: `1024x1024` `1536x1024` `1024x1536` |
+| `--quality` | OpenAI only: `low` `medium` `high` `auto` |
+| `--output-format` | OpenAI only: `png` (default) `jpeg` `webp` |
+| `--input-image` | Input image path for editing; repeat for multiple images |
 
 ## Provider-Specific Defaults
 
@@ -66,26 +67,47 @@ yummycli image generate \
 - Image size: `1K`
 
 **OpenAI** (when openai is the active provider):
-- Model: `dall-e-3`
+- Model: `gpt-image-2`
 - Size: `1024x1024`
-- Quality: `standard`
-- Style: `vivid`
+- Quality: API default (auto)
+- Output format: `png`
 
-## Model Selection (Gemini)
+## Model Selection
+
+### Gemini
 
 - User says `gemini pro` or `pro` → `--model gemini-3-pro-image-preview`
 - User says `gemini flash` or `flash` → `--model gemini-3.1-flash-image`
-- No explicit model request → omit `--model` and let yummycli use its default
+- No explicit model request → omit `--model`, let yummycli use its default
+
+### OpenAI
+
+- User says `gpt-image-2` or `gpt image 2` or similar → `--model gpt-image-2`
+- User says `gpt-image-1` or `gpt image 1` or similar → `--model gpt-image-1`
+- User says `dall-e-3` or `dalle 3` → `--model dall-e-3`
+- User mentions a model name that cannot be mapped to a known OpenAI image model → omit `--model` and let yummycli use its default (`gpt-image-2`); do NOT guess or invent model names
+- No explicit model request → omit `--model`, let yummycli use its default
 
 ## Intent to Parameters
 
-Aspect-ratio guidance (Gemini):
-- Vertical/portrait/phone → `--aspect-ratio 9:16`
-- Widescreen/horizontal/desktop → `--aspect-ratio 16:9`
-- Square/avatar → `--aspect-ratio 1:1`
+**Aspect-ratio guidance (Gemini only):**
+- Vertical / portrait / phone wallpaper → `--aspect-ratio 9:16`
+- Widescreen / horizontal / desktop → `--aspect-ratio 16:9`
+- Square / avatar → `--aspect-ratio 1:1`
 - User provides a specific ratio → pass through directly
 - Shape unclear → omit
 
-Image-size guidance:
-- Explicit 4K → `--image-size 4K` (Gemini) or not applicable for OpenAI (use default)
-- Explicit HD quality → `--quality hd` (OpenAI only)
+**Image-size guidance (OpenAI):**
+- Landscape / horizontal → `--image-size 1536x1024`
+- Portrait / vertical → `--image-size 1024x1536`
+- Square or unspecified → `--image-size 1024x1024` (default)
+
+**Output format guidance (OpenAI):**
+- User asks for JPEG or smaller file size → `--output-format jpeg`
+- User asks for WebP → `--output-format webp`
+- Otherwise → omit, defaults to `png`
+
+**Quality guidance (OpenAI):**
+- User asks for high quality / best quality → `--quality high`
+- User asks for draft / fast / low quality → `--quality low`
+- Otherwise → omit, let API decide
