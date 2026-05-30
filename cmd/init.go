@@ -29,6 +29,9 @@ func NewCmdInit(f *cmdutil.Factory) *cobra.Command {
 		Short: "Configure a provider API key",
 		Long: `Save an API key for a provider and optionally set it as the default.
 
+If the API key for the provider is already configured, --api-key can be omitted
+and --default alone is sufficient to switch the default provider.
+
 PROVIDERS
   gemini   Google Gemini (image, video, speech)
   openai   OpenAI (image only)
@@ -36,27 +39,24 @@ PROVIDERS
 The --default flag sets this provider as the one used when --provider is
 omitted from generation commands. If two providers are configured, the
 non-default provider acts as automatic fallback when the primary fails.`,
-		Example: `  # Set Gemini as the default provider
+		Example: `  # First-time setup: save key and set as default
   yummycli init --provider gemini --api-key <key> --default
 
-  # Add OpenAI as a fallback (Gemini remains default)
+  # Add a second provider as fallback (existing default unchanged)
   yummycli init --provider openai --api-key <key>
 
-  # Switch default to OpenAI
-  yummycli init --provider openai --api-key <key> --default`,
+  # Switch default to a provider whose key is already saved
+  yummycli init --provider openai --default`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit(f, opts)
 		},
 	}
 
 	command.Flags().StringVar(&opts.Provider, "provider", "", "provider name (gemini, openai)")
-	command.Flags().StringVar(&opts.APIKey, "api-key", "", "API key for the provider")
+	command.Flags().StringVar(&opts.APIKey, "api-key", "", "API key for the provider (required if not already configured)")
 	command.Flags().BoolVar(&opts.Default, "default", false, "set this provider as the default")
 
 	if err := command.MarkFlagRequired("provider"); err != nil {
-		panic(err)
-	}
-	if err := command.MarkFlagRequired("api-key"); err != nil {
 		panic(err)
 	}
 
@@ -76,8 +76,19 @@ func runInit(f *cmdutil.Factory, opts *initOptions) error {
 		return err
 	}
 
-	if err := f.CredentialStore.SaveAPIKey(normalized, opts.APIKey); err != nil {
-		return err
+	if opts.APIKey != "" {
+		if err := f.CredentialStore.SaveAPIKey(normalized, opts.APIKey); err != nil {
+			return err
+		}
+	} else {
+		// No key provided — require that one is already stored.
+		configured, err := f.CredentialStore.HasAPIKey(normalized)
+		if err != nil {
+			return err
+		}
+		if !configured {
+			return fmt.Errorf("no API key configured for %s; provide one with --api-key", normalized)
+		}
 	}
 
 	if opts.Default {

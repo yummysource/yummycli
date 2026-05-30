@@ -125,12 +125,62 @@ func TestInitRequiresProviderFlag(t *testing.T) {
 	}
 }
 
-func TestInitRequiresAPIKeyFlag(t *testing.T) {
+func TestInitRequiresAPIKeyWhenNotAlreadyConfigured(t *testing.T) {
 	stdout := &bytes.Buffer{}
 	f := newInitFactory(stdout, &bytes.Buffer{})
 	cmd := NewCmdInit(f)
 	cmd.SetArgs([]string{"--provider", providers.Gemini})
-	if err := cmd.Execute(); err == nil {
-		t.Fatal("expected error without --api-key")
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error when no api-key provided and none stored")
+	}
+	want := "no API key configured for gemini; provide one with --api-key"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestInitWithDefaultOnlyWhenKeyAlreadyStored(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	f := newInitFactory(stdout, &bytes.Buffer{})
+
+	// Pre-store a key for gemini.
+	_ = f.CredentialStore.SaveAPIKey(providers.Gemini, "existing-key")
+
+	cmd := NewCmdInit(f)
+	cmd.SetArgs([]string{"--provider", providers.Gemini, "--default"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got, err := f.CredentialStore.GetDefaultProvider()
+	if err != nil {
+		t.Fatalf("GetDefaultProvider returned error: %v", err)
+	}
+	if got != providers.Gemini {
+		t.Fatalf("default provider = %q, want %q", got, providers.Gemini)
+	}
+}
+
+func TestInitWithDefaultOnlyDoesNotOverwriteExistingKey(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	f := newInitFactory(stdout, &bytes.Buffer{})
+
+	_ = f.CredentialStore.SaveAPIKey(providers.Gemini, "original-key")
+
+	cmd := NewCmdInit(f)
+	cmd.SetArgs([]string{"--provider", providers.Gemini, "--default"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	key, err := f.CredentialStore.GetAPIKey(providers.Gemini)
+	if err != nil {
+		t.Fatalf("GetAPIKey returned error: %v", err)
+	}
+	if key != "original-key" {
+		t.Fatalf("api key = %q, want original-key (should not be overwritten)", key)
 	}
 }
