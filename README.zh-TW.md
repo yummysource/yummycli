@@ -133,7 +133,7 @@ yummycli gemini init --api-key "AIza..." --default
 
 | 供應商 | 預設模型 | 預設尺寸 |
 |---|---|---|
-| Gemini | `gemini-3.1-flash-image` | `16:9`，`1K` |
+| Gemini | `gemini-nano-banana-2.1` | `16:9`，`1K` |
 | OpenAI | `gpt-image-2` | `1536x864`（16:9） |
 
 兩個等價入口：
@@ -171,7 +171,7 @@ yummycli image generate --prompt "白色盤子上放著一根成熟的香蕉，�
 | 參數 | 說明 | 預設值 |
 |------|------|--------|
 | `--aspect-ratio` | 命名比例：`16:9`、`9:16`、`21:9`、`1:1` 等 | `16:9` |
-| `--image-size` | 解析度：`512`、`0.5K`、`1K`、`2K`、`4K` | `1K` |
+| `--image-size` | 解析度：`1K`、`2K`、`4K`（上一代模型另支援 `512`/`0.5K`） | `1K` |
 
 **OpenAI 專屬參數：**
 
@@ -237,8 +237,8 @@ yummycli image generate --provider gemini \
 
 **Gemini：**
 ```bash
-# Flash（預設）—— 速度較快，支援更多比例和尺寸
-yummycli image generate --provider gemini --prompt "..." --model gemini-3.1-flash-image
+# Nano Banana 2.1（預設）—— 最新高效模型
+yummycli image generate --provider gemini --prompt "..." --model gemini-nano-banana-2.1
 
 # Pro —— 品質較高
 yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image-preview
@@ -261,6 +261,7 @@ yummycli image generate --provider openai --prompt "..." --model gpt-5.5
 
 | 模型 | 支援的值 |
 |------|---------|
+| `gemini-nano-banana-2.1` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
 | `gemini-3.1-flash-image` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
 | `gemini-3-pro-image-preview` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
 
@@ -270,10 +271,11 @@ yummycli image generate --provider openai --prompt "..." --model gpt-5.5
 
 | 模型 | 支援的值 |
 |------|---------|
+| `gemini-nano-banana-2.1` | `1K` `2K` `4K` |
 | `gemini-3.1-flash-image` | `512` `0.5K` `1K` `2K` `4K` |
 | `gemini-3-pro-image-preview` | `1K` `2K` `4K` |
 
-`512` 和 `0.5K` 僅 Flash 模型支援。
+`512` 和 `0.5K` 僅 `gemini-3.1-flash-image` 支援。
 
 ### JSON 輸出
 
@@ -281,7 +283,7 @@ yummycli image generate --provider openai --prompt "..." --model gpt-5.5
 {
   "provider": "gemini",
   "output": "gemini_20260410123456_789.png",
-  "model": "gemini-3.1-flash-image",
+  "model": "gemini-nano-banana-2.1",
   "inputImageCount": 0
 }
 ```
@@ -469,7 +471,7 @@ yummycli
 │   ├── nanobanana                              使用 Gemini 生成 / 編輯圖像
 │   │     --prompt         （必填）
 │   │     --output
-│   │     --model          預設：gemini-3.1-flash-image
+│   │     --model          預設：gemini-nano-banana-2.1
 │   │     --aspect-ratio   預設：16:9
 │   │     --image-size     預設：1K
 │   │     --input-image    （可重複）

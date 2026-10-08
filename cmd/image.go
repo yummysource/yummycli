@@ -61,7 +61,7 @@ Provider is resolved from config when --provider is omitted.
 Run "yummycli init --provider <name> --api-key <key> --default" to set a default provider.
 
 PROVIDERS
-  gemini   Google Gemini image generation (gemini-3.1-flash-image by default)
+  gemini   Google Gemini image generation (gemini-nano-banana-2.1 by default)
            Docs: https://ai.google.dev/gemini-api/docs/image-generation
   openai   OpenAI image generation (gpt-image-2 by default)
            Docs: https://developers.openai.com/api/docs/guides/image-generation
@@ -71,7 +71,7 @@ GEMINI FLAGS
                    Supported: 1:1 1:4 1:8 2:3 3:2 3:4 4:1 4:3 4:5 5:4 8:1 9:16 16:9 21:9
                    Default: 16:9
   --image-size     Output resolution.
-                   Supported: 512 0.5K 1K 2K 4K
+                   Supported by default model: 1K 2K 4K
                    Default: 1K
                    Note: 512 and 0.5K are gemini-3.1-flash-image only.
 
@@ -92,7 +92,7 @@ OPENAI FLAGS
                    Note: jpeg significantly reduces file size vs png.
 
 MODELS
-  gemini   gemini-3.1-flash-image (default), gemini-3-pro-image-preview
+  gemini   gemini-nano-banana-2.1 (default), gemini-3.1-flash-image, gemini-3-pro-image-preview
   openai   gpt-image-2 (default), gpt-5.5
            Unknown models trigger a warning and fall back to gpt-image-2.
 

@@ -1,8 +1,13 @@
 package image
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,17 +20,21 @@ import (
 
 // GeminiGenerator generates images with the Gemini API.
 type GeminiGenerator struct {
-	credentialStore *auth.ProviderCredentialStore
+	credentialStore      *auth.ProviderCredentialStore
+	interactionsEndpoint string
+	httpClient           *http.Client
 }
 
 // NewGeminiGenerator creates a GeminiGenerator.
 func NewGeminiGenerator(credentialStore *auth.ProviderCredentialStore) *GeminiGenerator {
 	return &GeminiGenerator{
-		credentialStore: credentialStore,
+		credentialStore:      credentialStore,
+		interactionsEndpoint: "https://generativelanguage.googleapis.com/v1beta/interactions",
+		httpClient:           http.DefaultClient,
 	}
 }
 
-const geminiDefaultModelFallback = "gemini-3.1-flash-image"
+const geminiDefaultModelFallback = "gemini-nano-banana-2.1"
 
 // GenerateImage generates an image and writes it to the requested output path.
 func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) error {
@@ -40,6 +49,9 @@ func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 	apiKey, err := g.credentialStore.GetAPIKey(req.Provider)
 	if err != nil {
 		return err
+	}
+	if req.Model == geminiDefaultModelFallback {
+		return g.generateWithInteractions(ctx, apiKey, req)
 	}
 
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
@@ -92,6 +104,108 @@ func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRe
 			if part.InlineData != nil && len(part.InlineData.Data) > 0 {
 				return os.WriteFile(req.Output, part.InlineData.Data, 0o644)
 			}
+		}
+	}
+
+	return fmt.Errorf("no image data returned")
+}
+
+type interactionInput struct {
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
+	Data     string `json:"data,omitempty"`
+	MIMEType string `json:"mime_type,omitempty"`
+}
+
+type interactionImageFormat struct {
+	Type        string `json:"type"`
+	AspectRatio string `json:"aspect_ratio,omitempty"`
+	ImageSize   string `json:"image_size,omitempty"`
+}
+
+type createInteractionRequest struct {
+	Model          string                 `json:"model"`
+	Input          []interactionInput     `json:"input"`
+	ResponseFormat interactionImageFormat `json:"response_format"`
+}
+
+type interactionContent struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
+}
+
+type createInteractionResponse struct {
+	Steps []struct {
+		Content []interactionContent `json:"content"`
+	} `json:"steps"`
+}
+
+func (g *GeminiGenerator) generateWithInteractions(ctx context.Context, apiKey string, req GenerateImageRequest) error {
+	inputs := []interactionInput{{Type: "text", Text: req.Prompt}}
+	for _, imagePath := range req.InputImages {
+		data, err := os.ReadFile(imagePath)
+		if err != nil {
+			return err
+		}
+		mimeType, err := mimeTypeFromPath(imagePath)
+		if err != nil {
+			return err
+		}
+		inputs = append(inputs, interactionInput{
+			Type:     "image",
+			Data:     base64.StdEncoding.EncodeToString(data),
+			MIMEType: mimeType,
+		})
+	}
+
+	payload, err := json.Marshal(createInteractionRequest{
+		Model: req.Model,
+		Input: inputs,
+		ResponseFormat: interactionImageFormat{
+			Type:        "image",
+			AspectRatio: req.AspectRatio,
+			ImageSize:   req.ImageSize,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, g.interactionsEndpoint, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", apiKey)
+
+	resp, err := g.httpClient.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		responseBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("gemini interactions API returned %s: %s", resp.Status, strings.TrimSpace(string(responseBody)))
+	}
+
+	var result createInteractionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+	for _, step := range result.Steps {
+		for _, content := range step.Content {
+			if content.Type != "image" || content.Data == "" {
+				continue
+			}
+			imageData, err := base64.StdEncoding.DecodeString(content.Data)
+			if err != nil {
+				return err
+			}
+			return os.WriteFile(req.Output, imageData, 0o644)
 		}
 	}
 

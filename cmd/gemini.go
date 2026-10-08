@@ -12,7 +12,7 @@ import (
 )
 
 // geminiDefaultModel is the default image generation model for gemini nanobanana.
-const geminiDefaultModel = "gemini-3.1-flash-image"
+const geminiDefaultModel = "gemini-nano-banana-2.1"
 
 // NewCmdGemini creates the Gemini provider shortcut command group.
 func NewCmdGemini(f *cmdutil.Factory) *cobra.Command {
@@ -77,7 +77,7 @@ Docs: https://ai.google.dev/gemini-api/docs/image-generation
 
 
 DEFAULTS
-  --model        gemini-3.1-flash-image
+  --model        gemini-nano-banana-2.1
   --aspect-ratio 16:9
   --image-size   1K
 
@@ -85,11 +85,12 @@ ASPECT RATIO
   Supported: 1:1 1:4 1:8 2:3 3:2 3:4 4:1 4:3 4:5 5:4 8:1 9:16 16:9 21:9
 
 IMAGE SIZE
-  Supported: 512 0.5K 1K 2K 4K
+  Supported by default model: 1K 2K 4K
   Note: 512 and 0.5K are gemini-3.1-flash-image only.
 
 MODELS
-  gemini-3.1-flash-image   (default) fast, supports all aspect ratios and 512/0.5K sizes
+  gemini-nano-banana-2.1   (default) latest high-efficiency model; supports all aspect ratios
+  gemini-3.1-flash-image   previous generation; adds 512/0.5K sizes
   gemini-3-pro-image-preview  higher quality; aspect ratios: 1:1 2:3 3:2 3:4 4:3 4:5 5:4 9:16 16:9 21:9
 
 IMAGE EDITING
@@ -116,7 +117,7 @@ IMAGE EDITING
 
 	command.Flags().StringVar(&opts.Prompt, "prompt", "", "image generation or editing prompt")
 	command.Flags().StringVar(&opts.Output, "output", "", "output file path (auto-generated if omitted)")
-	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model (default: gemini-3.1-flash-image)")
+	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model (default: gemini-nano-banana-2.1)")
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "output aspect ratio (default: 16:9)")
 	command.Flags().StringVar(&opts.ImageSize, "image-size", opts.ImageSize, "output resolution: 512 | 0.5K | 1K | 2K | 4K (default: 1K)")
 	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "input image path for editing; repeat for multiple")
@@ -226,7 +227,7 @@ func validateAspectRatio(model, aspectRatio string) error {
 
 	var allowed []string
 	switch model {
-	case "gemini-3.1-flash-image":
+	case "gemini-nano-banana-2.1", "gemini-3.1-flash-image":
 		allowed = aspectRatioGemini31FlashImagePreview
 	case "gemini-3-pro-image-preview":
 		allowed = aspectRatioGemini3ProImagePreview
@@ -260,6 +261,8 @@ func validateImageSize(model, imageSize string) (string, error) {
 	switch model {
 	case "gemini-3.1-flash-image":
 		allowed = resolutionGemini31FlashImagePreview
+	case "gemini-nano-banana-2.1":
+		allowed = resolutionGemini3ProImagePreview
 	case "gemini-3-pro-image-preview":
 		allowed = resolutionGemini3ProImagePreview
 	default:

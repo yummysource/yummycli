@@ -189,8 +189,43 @@ func TestGeminiNanoBananaUsesDefaultModelWhenGenerating(t *testing.T) {
 	if generator.req.Output != "./result.png" {
 		t.Fatalf("output = %q, want %q", generator.req.Output, "./result.png")
 	}
-	if generator.req.Model != "gemini-3.1-flash-image" {
-		t.Fatalf("model = %q, want %q", generator.req.Model, "gemini-3.1-flash-image")
+	if generator.req.Model != "gemini-nano-banana-2.1" {
+		t.Fatalf("model = %q, want %q", generator.req.Model, "gemini-nano-banana-2.1")
+	}
+}
+
+func TestGeminiNanoBananaRejectsHalfKForDefaultModel(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	secretStore := newMemorySecretStore()
+	generator := &fakeImageGenerator{}
+
+	f := &cmdutil.Factory{
+		IOStreams: &cmdutil.IOStreams{
+			Out:    stdout,
+			ErrOut: stderr,
+		},
+		CredentialStore: auth.NewProviderCredentialStore(secretStore),
+		ImageGenerator:  generator,
+		Output:          output.New(stdout),
+	}
+
+	cmd := NewCmdGemini(f)
+	cmd.SetArgs([]string{
+		"nanobanana",
+		"--prompt", "a banana on a plate",
+		"--output", "./result.png",
+		"--image-size", "0.5K",
+	})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute returned nil error for unsupported image size")
+	}
+
+	want := "unsupported image size: 0.5K"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
 }
 
@@ -541,7 +576,7 @@ func TestGeminiNanoBananaWritesJSONResultOnSuccess(t *testing.T) {
 	}
 
 	got := stdout.String()
-	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410123456_789.png\",\"model\":\"gemini-3.1-flash-image\",\"inputImageCount\":2}\n"
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410123456_789.png\",\"model\":\"gemini-nano-banana-2.1\",\"inputImageCount\":2}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}
@@ -583,7 +618,7 @@ func TestGeminiNanoBananaWritesZeroInputImageCountForTextOnlyGeneration(t *testi
 	}
 
 	got := stdout.String()
-	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410080910_110.png\",\"model\":\"gemini-3.1-flash-image\",\"inputImageCount\":0}\n"
+	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410080910_110.png\",\"model\":\"gemini-nano-banana-2.1\",\"inputImageCount\":0}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
 	}

@@ -64,7 +64,7 @@ yummycli image generate \
 ## Provider-Specific Defaults
 
 **Gemini** (when gemini is the active provider):
-- Model: `gemini-3.1-flash-image`
+- Model: `gemini-nano-banana-2.1`
 - Aspect ratio: `16:9`
 - Image size: `1K`
 
@@ -79,7 +79,7 @@ yummycli image generate \
 ### Gemini
 
 - User says `gemini pro` or `pro` → `--model gemini-3-pro-image-preview`
-- User says `gemini flash` or `flash` → `--model gemini-3.1-flash-image`
+- User says `nano banana`, `gemini flash`, or `flash` → `--model gemini-nano-banana-2.1`
 - No explicit model request → omit `--model`, let yummycli use its default
 
 ### OpenAI
