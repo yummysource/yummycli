@@ -73,7 +73,8 @@ GEMINI FLAGS
   --image-size     Output resolution.
                    Supported by default model: 1K 2K 4K
                    Default: 1K
-                   Note: 512 and 0.5K are gemini-3.1-flash-image only.
+                   Note: 512 and 0.5K are gemini-3.1-flash-image only;
+                   gemini-3.1-flash-lite-image is 1K only.
 
 OPENAI FLAGS
   --image-size     Output dimensions in WxH format. Both must be multiples of 16.
@@ -92,7 +93,8 @@ OPENAI FLAGS
                    Note: jpeg significantly reduces file size vs png.
 
 MODELS
-  gemini   gemini-nano-banana-2.1 (default), gemini-3.1-flash-image, gemini-3-pro-image-preview
+  gemini   gemini-nano-banana-2.1 (default), gemini-3.1-flash-image,
+           gemini-3.1-flash-lite-image, gemini-3-pro-image
   openai   gpt-image-2 (default), gpt-5.5
            Unknown models trigger a warning and fall back to gpt-image-2.
 
@@ -174,6 +176,9 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		if opts.ImageSize == "" {
 			opts.ImageSize = "1K"
 		}
+		if err := validateGeminiModel(opts.Model); err != nil {
+			return err
+		}
 		if err := validateAspectRatio(opts.Model, opts.AspectRatio); err != nil {
 			return err
 		}
@@ -227,14 +232,16 @@ func runImageGenerate(f *cmdutil.Factory, opts *imageGenerateOptions) error {
 		Fallback:     fallback,
 	}
 
-	if err := f.ImageGenerator.GenerateImage(context.Background(), req); err != nil {
+	generated, err := f.ImageGenerator.GenerateImage(context.Background(), req)
+	if err != nil {
 		return err
 	}
 
+	// Report what actually produced the image; after a fallback this is not the requested provider.
 	result := imageGenerateResult{
-		Provider:        opts.Provider,
+		Provider:        generated.Provider,
 		Output:          opts.Output,
-		Model:           opts.Model,
+		Model:           generated.Model,
 		InputImageCount: len(opts.InputImages),
 	}
 

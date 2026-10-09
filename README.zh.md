@@ -84,7 +84,7 @@ yummycli init --provider gemini --api-key "AIza..." --default
 yummycli init --provider openai --api-key "sk-..."
 ```
 
-配置两个供应商后，主供应商失败时自动使用另一个。
+配置两个供应商后，主供应商失败时自动使用另一个，此时 JSON 中的 `provider` 和 `model` 会如实显示实际出图的备用供应商。
 
 ### 查看配置状态
 
@@ -171,7 +171,7 @@ yummycli image generate --prompt "白色盘子上放着一根成熟的香蕉，�
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--aspect-ratio` | 命名比例：`16:9`、`9:16`、`21:9`、`1:1` 等 | `16:9` |
-| `--image-size` | 分辨率：`1K`、`2K`、`4K`（上一代模型另支持 `512`/`0.5K`） | `1K` |
+| `--image-size` | 分辨率：`1K`、`2K`、`4K`（`gemini-3.1-flash-image` 另支持 `512`/`0.5K`；Lite 仅 `1K`） | `1K` |
 
 **OpenAI 专属参数：**
 
@@ -241,7 +241,10 @@ yummycli image generate --provider gemini \
 yummycli image generate --provider gemini --prompt "..." --model gemini-nano-banana-2.1
 
 # Pro —— 质量更高
-yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image-preview
+yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image
+
+# Lite —— 最快、最便宜（仅 1K）
+yummycli image generate --provider gemini --prompt "..." --model gemini-3.1-flash-lite-image --aspect-ratio 1:1
 ```
 
 **OpenAI：**
@@ -263,9 +266,10 @@ yummycli image generate --provider openai --prompt "..." --model gpt-5.5
 |------|---------|
 | `gemini-nano-banana-2.1` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
 | `gemini-3.1-flash-image` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
-| `gemini-3-pro-image-preview` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
+| `gemini-3.1-flash-lite-image` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
+| `gemini-3-pro-image` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
 
-`1:4`、`1:8`、`4:1`、`8:1` 仅 Flash 模型支持。
+`1:4`、`1:8`、`4:1`、`8:1` 仅 `gemini-nano-banana-2.1` 和 `gemini-3.1-flash-image` 支持。
 
 **图像尺寸：**
 
@@ -273,9 +277,10 @@ yummycli image generate --provider openai --prompt "..." --model gpt-5.5
 |------|---------|
 | `gemini-nano-banana-2.1` | `1K` `2K` `4K` |
 | `gemini-3.1-flash-image` | `512` `0.5K` `1K` `2K` `4K` |
-| `gemini-3-pro-image-preview` | `1K` `2K` `4K` |
+| `gemini-3.1-flash-lite-image` | `1K` |
+| `gemini-3-pro-image` | `1K` `2K` `4K` |
 
-`512` 和 `0.5K` 仅 `gemini-3.1-flash-image` 支持。
+`512` 和 `0.5K` 仅 `gemini-3.1-flash-image` 支持；`gemini-3.1-flash-lite-image` 仅支持 `1K`。
 
 ### JSON 输出
 

@@ -13,10 +13,13 @@ type stubGenerator struct {
 	err     error
 }
 
-func (s *stubGenerator) GenerateImage(_ context.Context, req GenerateImageRequest) error {
+func (s *stubGenerator) GenerateImage(_ context.Context, req GenerateImageRequest) (GenerateImageResult, error) {
 	s.called = true
 	s.lastReq = req
-	return s.err
+	if s.err != nil {
+		return GenerateImageResult{}, s.err
+	}
+	return GenerateImageResult{Provider: req.Provider, Model: req.Model}, nil
 }
 
 func TestMultiGeneratorRoutesToCorrectProvider(t *testing.T) {
@@ -27,7 +30,7 @@ func TestMultiGeneratorRoutesToCorrectProvider(t *testing.T) {
 		"openai": openai,
 	}, nil)
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider: "gemini",
 		Prompt:   "a cat",
 	})
@@ -50,7 +53,7 @@ func TestMultiGeneratorClearsProviderSpecificFieldsOnFallback(t *testing.T) {
 		"gemini": fallback,
 	}, nil)
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider:    "openai",
 		Prompt:      "a cat",
 		Model:       "dall-e-3",
@@ -92,9 +95,10 @@ func TestMultiGeneratorFallsBackOnProviderError(t *testing.T) {
 		"openai": openai,
 	}, &logBuf)
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	result, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider: "gemini",
 		Prompt:   "a cat",
+		Model:    "gemini-nano-banana-2.1",
 		Fallback: "openai",
 	})
 	if err != nil {
@@ -102,6 +106,9 @@ func TestMultiGeneratorFallsBackOnProviderError(t *testing.T) {
 	}
 	if !openai.called {
 		t.Fatal("openai fallback generator was not called")
+	}
+	if result.Provider != "openai" || result.Model != "" {
+		t.Fatalf("result = %+v, want fallback provider openai with its own (empty stub) model", result)
 	}
 	if !strings.Contains(logBuf.String(), "openai") {
 		t.Fatalf("expected fallback log to mention openai, got %q", logBuf.String())
@@ -117,7 +124,7 @@ func TestMultiGeneratorReturnsErrorWhenBothFail(t *testing.T) {
 		"openai": openai,
 	}, nil)
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider: "gemini",
 		Prompt:   "a cat",
 		Fallback: "openai",
@@ -130,7 +137,7 @@ func TestMultiGeneratorReturnsErrorWhenBothFail(t *testing.T) {
 func TestMultiGeneratorReturnsErrorForUnknownProvider(t *testing.T) {
 	g := NewMultiGenerator(map[string]ImageGenerator{}, nil)
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider: "unknown",
 		Prompt:   "a cat",
 	})

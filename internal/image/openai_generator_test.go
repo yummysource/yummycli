@@ -68,7 +68,7 @@ func TestOpenAIGeneratorRejectsNonOpenAIProvider(t *testing.T) {
 	store := auth.NewProviderCredentialStore(newMemorySecretStore())
 	g := NewOpenAIGenerator(store, "")
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider: providers.Gemini,
 		Prompt:   "a cat",
 		Output:   "out.png",
@@ -93,7 +93,7 @@ func TestOpenAIGeneratorWritesImageFile(t *testing.T) {
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "out.png")
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider:  providers.OpenAI,
 		Prompt:    "a cat",
 		Output:    outPath,
@@ -146,7 +146,7 @@ func TestOpenAIGeneratorEditsImageWithInputFile(t *testing.T) {
 	_ = os.WriteFile(inputPath, []byte("input-image"), 0o644)
 	outPath := filepath.Join(dir, "out.png")
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider:    providers.OpenAI,
 		Prompt:      "make it look like a watercolor",
 		Output:      outPath,
@@ -188,7 +188,7 @@ func TestOpenAIGeneratorReturnsErrorOnAPIError(t *testing.T) {
 
 	g := NewOpenAIGenerator(store, srv.URL)
 
-	err := g.GenerateImage(context.Background(), GenerateImageRequest{
+	_, err := g.GenerateImage(context.Background(), GenerateImageRequest{
 		Provider: providers.OpenAI,
 		Prompt:   "a cat",
 		Output:   "out.png",

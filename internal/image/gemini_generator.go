@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"google.golang.org/genai"
 
@@ -30,27 +31,43 @@ func NewGeminiGenerator(credentialStore *auth.ProviderCredentialStore) *GeminiGe
 	return &GeminiGenerator{
 		credentialStore:      credentialStore,
 		interactionsEndpoint: "https://generativelanguage.googleapis.com/v1beta/interactions",
-		httpClient:           http.DefaultClient,
+		httpClient:           &http.Client{Timeout: geminiInteractionsTimeout},
 	}
 }
 
 const geminiDefaultModelFallback = "gemini-nano-banana-2.1"
 
-// GenerateImage generates an image and writes it to the requested output path.
-func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) error {
-	if req.Provider != providers.Gemini {
-		return fmt.Errorf("unsupported provider: %s", req.Provider)
-	}
+// geminiInteractionsTimeout bounds a single Interactions API call; 4K generation with thinking can take minutes.
+const geminiInteractionsTimeout = 5 * time.Minute
 
+// usesInteractionsAPI reports whether the model must be called through the Interactions API
+// instead of generateContent.
+func usesInteractionsAPI(model string) bool {
+	return model == "gemini-nano-banana-2.1"
+}
+
+// GenerateImage generates an image and writes it to the requested output path.
+func (g *GeminiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) (GenerateImageResult, error) {
 	if req.Model == "" {
 		req.Model = geminiDefaultModelFallback
+	}
+	if err := g.generate(ctx, req); err != nil {
+		return GenerateImageResult{}, err
+	}
+	return GenerateImageResult{Provider: req.Provider, Model: req.Model}, nil
+}
+
+// generate calls the API matching req.Model and writes the image to req.Output.
+func (g *GeminiGenerator) generate(ctx context.Context, req GenerateImageRequest) error {
+	if req.Provider != providers.Gemini {
+		return fmt.Errorf("unsupported provider: %s", req.Provider)
 	}
 
 	apiKey, err := g.credentialStore.GetAPIKey(req.Provider)
 	if err != nil {
 		return err
 	}
-	if req.Model == geminiDefaultModelFallback {
+	if usesInteractionsAPI(req.Model) {
 		return g.generateWithInteractions(ctx, apiKey, req)
 	}
 
@@ -136,6 +153,7 @@ type interactionContent struct {
 
 type createInteractionResponse struct {
 	Steps []struct {
+		Type    string               `json:"type"`
 		Content []interactionContent `json:"content"`
 	} `json:"steps"`
 }
@@ -196,20 +214,28 @@ func (g *GeminiGenerator) generateWithInteractions(ctx context.Context, apiKey s
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return err
 	}
+	// Like the SDK's output_image, keep the last image produced in a model_output step;
+	// thought steps carry interim images and are skipped.
+	var imageBase64 string
 	for _, step := range result.Steps {
+		if step.Type != "model_output" {
+			continue
+		}
 		for _, content := range step.Content {
-			if content.Type != "image" || content.Data == "" {
-				continue
+			if content.Type == "image" && content.Data != "" {
+				imageBase64 = content.Data
 			}
-			imageData, err := base64.StdEncoding.DecodeString(content.Data)
-			if err != nil {
-				return err
-			}
-			return os.WriteFile(req.Output, imageData, 0o644)
 		}
 	}
+	if imageBase64 == "" {
+		return fmt.Errorf("no image data returned")
+	}
 
-	return fmt.Errorf("no image data returned")
+	imageData, err := base64.StdEncoding.DecodeString(imageBase64)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(req.Output, imageData, 0o644)
 }
 
 func mimeTypeFromPath(path string) (string, error) {

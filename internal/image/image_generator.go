@@ -16,7 +16,14 @@ type GenerateImageRequest struct {
 	InputImages  []string
 }
 
+// GenerateImageResult reports which provider and model actually produced the image,
+// which differs from the request when a fallback provider was used.
+type GenerateImageResult struct {
+	Provider string
+	Model    string
+}
+
 // ImageGenerator generates images from text prompts.
 type ImageGenerator interface {
-	GenerateImage(ctx context.Context, req GenerateImageRequest) error
+	GenerateImage(ctx context.Context, req GenerateImageRequest) (GenerateImageResult, error)
 }

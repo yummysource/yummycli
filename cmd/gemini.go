@@ -86,12 +86,13 @@ ASPECT RATIO
 
 IMAGE SIZE
   Supported by default model: 1K 2K 4K
-  Note: 512 and 0.5K are gemini-3.1-flash-image only.
+  Note: 512 and 0.5K are gemini-3.1-flash-image only; gemini-3.1-flash-lite-image is 1K only.
 
 MODELS
-  gemini-nano-banana-2.1   (default) latest high-efficiency model; supports all aspect ratios
-  gemini-3.1-flash-image   previous generation; adds 512/0.5K sizes
-  gemini-3-pro-image-preview  higher quality; aspect ratios: 1:1 2:3 3:2 3:4 4:3 4:5 5:4 9:16 16:9 21:9
+  gemini-nano-banana-2.1       (default) latest high-efficiency model; supports all aspect ratios
+  gemini-3.1-flash-image       previous generation; adds 512/0.5K sizes
+  gemini-3.1-flash-lite-image  fastest and cheapest; 1K only; aspect ratios: 1:1 2:3 3:2 3:4 4:3 4:5 5:4 9:16 16:9 21:9
+  gemini-3-pro-image           higher quality; aspect ratios: 1:1 2:3 3:2 3:4 4:3 4:5 5:4 9:16 16:9 21:9
 
 IMAGE EDITING
   Pass --input-image to edit an existing image instead of generating from scratch.`,
@@ -119,7 +120,7 @@ IMAGE EDITING
 	command.Flags().StringVar(&opts.Output, "output", "", "output file path (auto-generated if omitted)")
 	command.Flags().StringVar(&opts.Model, "model", opts.Model, "Gemini image model (default: gemini-nano-banana-2.1)")
 	command.Flags().StringVar(&opts.AspectRatio, "aspect-ratio", opts.AspectRatio, "output aspect ratio (default: 16:9)")
-	command.Flags().StringVar(&opts.ImageSize, "image-size", opts.ImageSize, "output resolution: 512 | 0.5K | 1K | 2K | 4K (default: 1K)")
+	command.Flags().StringVar(&opts.ImageSize, "image-size", opts.ImageSize, "output resolution: 1K | 2K | 4K; gemini-3.1-flash-image also 512 | 0.5K (default: 1K)")
 	command.Flags().StringArrayVar(&opts.InputImages, "input-image", nil, "input image path for editing; repeat for multiple")
 
 	if err := command.MarkFlagRequired("prompt"); err != nil {
@@ -214,6 +215,23 @@ func newCmdGeminiVoices(f *cmdutil.Factory) *cobra.Command {
 	}
 }
 
+// shutDownGeminiImageModels maps Gemini image model IDs that Google has shut down to the
+// replacement recommended on https://ai.google.dev/gemini-api/docs/deprecations.
+var shutDownGeminiImageModels = map[string]string{
+	"gemini-3.1-flash-image-preview":            "gemini-nano-banana-2.1",
+	"gemini-3-pro-image-preview":                "gemini-3-pro-image",
+	"gemini-2.5-flash-image-preview":            "gemini-nano-banana-2.1",
+	"gemini-2.0-flash-preview-image-generation": "gemini-nano-banana-2.1",
+}
+
+// validateGeminiModel rejects shut-down Gemini image models, naming their replacement.
+func validateGeminiModel(model string) error {
+	if replacement, ok := shutDownGeminiImageModels[model]; ok {
+		return fmt.Errorf("model %s has been shut down and is no longer supported; use %s", model, replacement)
+	}
+	return nil
+}
+
 // validateAspectRatio checks whether the given aspect ratio is supported by the specified Gemini model.
 // An empty aspectRatio is allowed and skips validation.
 func validateAspectRatio(model, aspectRatio string) error {
@@ -229,7 +247,7 @@ func validateAspectRatio(model, aspectRatio string) error {
 	switch model {
 	case "gemini-nano-banana-2.1", "gemini-3.1-flash-image":
 		allowed = aspectRatioGemini31FlashImagePreview
-	case "gemini-3-pro-image-preview":
+	case "gemini-3-pro-image", "gemini-3.1-flash-lite-image":
 		allowed = aspectRatioGemini3ProImagePreview
 	default:
 		allowed = []string{"1:1", "3:4", "4:3", "9:16", "16:9"}
@@ -244,7 +262,7 @@ func validateAspectRatio(model, aspectRatio string) error {
 }
 
 // validateImageSize validates and normalizes the image size for the specified Gemini model.
-// The value is normalized to uppercase before comparison.
+// The value is normalized to uppercase before comparison, and "0.5K" is sent as "512".
 // An empty imageSize is allowed and returns ("", nil).
 func validateImageSize(model, imageSize string) (string, error) {
 	if imageSize == "" {
@@ -263,14 +281,20 @@ func validateImageSize(model, imageSize string) (string, error) {
 		allowed = resolutionGemini31FlashImagePreview
 	case "gemini-nano-banana-2.1":
 		allowed = resolutionGemini3ProImagePreview
-	case "gemini-3-pro-image-preview":
+	case "gemini-3-pro-image":
 		allowed = resolutionGemini3ProImagePreview
+	case "gemini-3.1-flash-lite-image":
+		allowed = []string{"1K"}
 	default:
 		allowed = []string{"1K", "2K", "4K"}
 	}
 
 	for _, item := range allowed {
 		if item == normalized {
+			// The API rejects "0.5K"; its accepted spelling for the same size is "512".
+			if normalized == "0.5K" {
+				return "512", nil
+			}
 			return normalized, nil
 		}
 	}

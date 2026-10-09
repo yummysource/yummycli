@@ -8,6 +8,7 @@ import (
 
 	"github.com/yummysource/yummycli/internal/auth"
 	"github.com/yummysource/yummycli/internal/cmdutil"
+	internalimage "github.com/yummysource/yummycli/internal/image"
 	"github.com/yummysource/yummycli/internal/output"
 	"github.com/yummysource/yummycli/internal/providers"
 )
@@ -440,5 +441,32 @@ func TestImageGenerateWarnsAndFallsBackForUnknownOpenAIModel(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "warning") {
 		t.Fatalf("expected warning on stderr, got %q", stderr.String())
+	}
+}
+
+func TestImageGenerateReportsFallbackProviderInJSON(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	generator := &fakeImageGenerator{
+		result: &internalimage.GenerateImageResult{Provider: providers.OpenAI, Model: "gpt-image-2"},
+	}
+	f := newImageGenerateFactory(stdout, stderr, generator)
+
+	cmd := NewCmdImage(f)
+	cmd.SetArgs([]string{
+		"generate",
+		"--provider", providers.Gemini,
+		"--prompt", "a sunset",
+		"--output", "./result.png",
+	})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute returned error: %v", err)
+	}
+
+	got := stdout.String()
+	want := "{\"provider\":\"openai\",\"output\":\"./result.png\",\"model\":\"gpt-image-2\",\"inputImageCount\":0}\n"
+	if got != want {
+		t.Fatalf("stdout = %q, want %q", got, want)
 	}
 }

@@ -78,9 +78,10 @@ yummycli image generate \
 
 ### Gemini
 
-- User says `gemini pro` or `pro` → `--model gemini-3-pro-image-preview`
-- User says `nano banana`, `gemini flash`, or `flash` → `--model gemini-nano-banana-2.1`
-- No explicit model request → omit `--model`, let yummycli use its default
+- User says `gemini pro` or `pro` → `--model gemini-3-pro-image`
+- User says `gemini flash`, `flash`, or `nano banana 2` → `--model gemini-3.1-flash-image`
+- User says `lite`, `flash lite`, or asks for the fastest/cheapest option → `--model gemini-3.1-flash-lite-image` (1K only; no `1:4` `1:8` `4:1` `8:1`)
+- User says `nano banana`, `nano banana 2.1`, or makes no explicit model request → omit `--model`, let yummycli use its default (`gemini-nano-banana-2.1`)
 
 ### OpenAI
 

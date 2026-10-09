@@ -140,12 +140,20 @@ type fakeImageGenerator struct {
 	called bool
 	req    internalimage.GenerateImageRequest
 	err    error
+	// result overrides the default result, which echoes the request's provider and model.
+	result *internalimage.GenerateImageResult
 }
 
-func (g *fakeImageGenerator) GenerateImage(_ context.Context, req internalimage.GenerateImageRequest) error {
+func (g *fakeImageGenerator) GenerateImage(_ context.Context, req internalimage.GenerateImageRequest) (internalimage.GenerateImageResult, error) {
 	g.called = true
 	g.req = req
-	return g.err
+	if g.err != nil {
+		return internalimage.GenerateImageResult{}, g.err
+	}
+	if g.result != nil {
+		return *g.result, nil
+	}
+	return internalimage.GenerateImageResult{Provider: req.Provider, Model: req.Model}, nil
 }
 
 func TestGeminiNanoBananaUsesDefaultModelWhenGenerating(t *testing.T) {
@@ -250,7 +258,7 @@ func TestGeminiNanoBananaUsesExplicitModelWhenProvided(t *testing.T) {
 		"nanobanana",
 		"--prompt", "a banana on a plate",
 		"--output", "./result.png",
-		"--model", "gemini-3-pro-image-preview",
+		"--model", "gemini-3-pro-image",
 	})
 
 	err := cmd.Execute()
@@ -262,7 +270,7 @@ func TestGeminiNanoBananaUsesExplicitModelWhenProvided(t *testing.T) {
 		t.Fatal("GenerateImage was not called")
 	}
 
-	want := "gemini-3-pro-image-preview"
+	want := "gemini-3-pro-image"
 	if generator.req.Model != want {
 		t.Fatalf("model = %q, want %q", generator.req.Model, want)
 	}
@@ -621,5 +629,75 @@ func TestGeminiNanoBananaWritesZeroInputImageCountForTextOnlyGeneration(t *testi
 	want := "{\"provider\":\"gemini\",\"output\":\"gemini_20260410080910_110.png\",\"model\":\"gemini-nano-banana-2.1\",\"inputImageCount\":0}\n"
 	if got != want {
 		t.Fatalf("stdout = %q, want %q", got, want)
+	}
+}
+
+func TestValidateGeminiImageOptionsPerModel(t *testing.T) {
+	for _, testCase := range []struct {
+		model       string
+		aspectRatio string
+		imageSize   string
+		wantErr     string
+	}{
+		{model: "gemini-nano-banana-2.1", aspectRatio: "8:1", imageSize: "4K"},
+		{model: "gemini-nano-banana-2.1", aspectRatio: "16:9", imageSize: "512", wantErr: "unsupported image size: 512"},
+		{model: "gemini-3.1-flash-image", aspectRatio: "1:8", imageSize: "0.5K"},
+		{model: "gemini-3.1-flash-lite-image", aspectRatio: "21:9", imageSize: "1K"},
+		{model: "gemini-3.1-flash-lite-image", aspectRatio: "16:9", imageSize: "2K", wantErr: "unsupported image size: 2K"},
+		{model: "gemini-3.1-flash-lite-image", aspectRatio: "1:4", imageSize: "1K", wantErr: "unsupported aspect ratio: 1:4"},
+		{model: "gemini-3-pro-image", aspectRatio: "4:5", imageSize: "4K"},
+		{model: "gemini-3-pro-image", aspectRatio: "8:1", imageSize: "1K", wantErr: "unsupported aspect ratio: 8:1"},
+	} {
+		t.Run(testCase.model+"/"+testCase.aspectRatio+"/"+testCase.imageSize, func(t *testing.T) {
+			err := validateAspectRatio(testCase.model, testCase.aspectRatio)
+			if err == nil {
+				_, err = validateImageSize(testCase.model, testCase.imageSize)
+			}
+
+			gotErr := ""
+			if err != nil {
+				gotErr = err.Error()
+			}
+			if gotErr != testCase.wantErr {
+				t.Fatalf("error = %q, want %q", gotErr, testCase.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateImageSizeSendsHalfKAs512(t *testing.T) {
+	got, err := validateImageSize("gemini-3.1-flash-image", "0.5k")
+	if err != nil {
+		t.Fatalf("validateImageSize returned error: %v", err)
+	}
+	if got != "512" {
+		t.Fatalf("image size = %q, want %q", got, "512")
+	}
+}
+
+func TestGeminiNanoBananaRejectsShutDownPreviewModels(t *testing.T) {
+	for model, replacement := range map[string]string{
+		"gemini-3.1-flash-image-preview":            "gemini-nano-banana-2.1",
+		"gemini-3-pro-image-preview":                "gemini-3-pro-image",
+		"gemini-2.5-flash-image-preview":            "gemini-nano-banana-2.1",
+		"gemini-2.0-flash-preview-image-generation": "gemini-nano-banana-2.1",
+	} {
+		t.Run(model, func(t *testing.T) {
+			stdout := &bytes.Buffer{}
+			generator := &fakeImageGenerator{}
+			f := newImageGenerateFactory(stdout, &bytes.Buffer{}, generator)
+
+			cmd := NewCmdGemini(f)
+			cmd.SetArgs([]string{"nanobanana", "--prompt", "a banana", "--model", model})
+
+			err := cmd.Execute()
+			want := "model " + model + " has been shut down and is no longer supported; use " + replacement
+			if err == nil || err.Error() != want {
+				t.Fatalf("error = %v, want %q", err, want)
+			}
+			if generator.called {
+				t.Fatal("GenerateImage should not be called for a shut-down model")
+			}
+		})
 	}
 }

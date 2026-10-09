@@ -40,13 +40,20 @@ func NewOpenAIGenerator(credentialStore *auth.ProviderCredentialStore, apiBase s
 
 // GenerateImage generates or edits an image and writes it to the requested output path.
 // When req.InputImages is non-empty, the images/edits endpoint is used.
-func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) error {
-	if req.Provider != providers.OpenAI {
-		return fmt.Errorf("unsupported provider: %s", req.Provider)
-	}
-
+func (g *OpenAIGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) (GenerateImageResult, error) {
 	if req.Model == "" {
 		req.Model = openAIDefaultModelFallback
+	}
+	if err := g.generate(ctx, req); err != nil {
+		return GenerateImageResult{}, err
+	}
+	return GenerateImageResult{Provider: req.Provider, Model: req.Model}, nil
+}
+
+// generate dispatches to the generations or edits endpoint and writes the image to req.Output.
+func (g *OpenAIGenerator) generate(ctx context.Context, req GenerateImageRequest) error {
+	if req.Provider != providers.OpenAI {
+		return fmt.Errorf("unsupported provider: %s", req.Provider)
 	}
 
 	apiKey, err := g.credentialStore.GetAPIKey(req.Provider)

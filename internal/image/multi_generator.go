@@ -27,25 +27,26 @@ func NewMultiGenerator(generators map[string]ImageGenerator, errLog io.Writer) *
 }
 
 // GenerateImage dispatches the request to the provider named in req.Provider.
-// If that call fails and req.Fallback is set, it retries with the fallback provider.
-func (m *MultiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) error {
+// If that call fails and req.Fallback is set, it retries with the fallback provider;
+// the returned result then names the fallback provider and its model.
+func (m *MultiGenerator) GenerateImage(ctx context.Context, req GenerateImageRequest) (GenerateImageResult, error) {
 	gen, ok := m.generators[req.Provider]
 	if !ok {
-		return fmt.Errorf("no generator registered for provider: %s", req.Provider)
+		return GenerateImageResult{}, fmt.Errorf("no generator registered for provider: %s", req.Provider)
 	}
 
-	err := gen.GenerateImage(ctx, req)
+	result, err := gen.GenerateImage(ctx, req)
 	if err == nil {
-		return nil
+		return result, nil
 	}
 
 	if req.Fallback == "" {
-		return err
+		return GenerateImageResult{}, err
 	}
 
 	fallbackGen, ok := m.generators[req.Fallback]
 	if !ok {
-		return fmt.Errorf("primary provider %s failed (%v); no generator for fallback provider %s", req.Provider, err, req.Fallback)
+		return GenerateImageResult{}, fmt.Errorf("primary provider %s failed (%v); no generator for fallback provider %s", req.Provider, err, req.Fallback)
 	}
 
 	fmt.Fprintf(m.errLog, "primary provider %s failed (%v), retrying with %s\n", req.Provider, err, req.Fallback)

@@ -84,7 +84,7 @@ yummycli init --provider gemini --api-key "AIza..." --default
 yummycli init --provider openai --api-key "sk-..."
 ```
 
-If both providers are configured, the non-default acts as an automatic fallback when the primary fails.
+If both providers are configured, the non-default acts as an automatic fallback when the primary fails. The JSON `provider` and `model` then report the fallback that actually produced the image.
 
 ### Check configuration
 
@@ -171,7 +171,7 @@ yummycli image generate --prompt "A ripe banana on a white plate, studio lightin
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--aspect-ratio` | Named ratio: `16:9`, `9:16`, `21:9`, `1:1`, etc. | `16:9` |
-| `--image-size` | Resolution: `1K`, `2K`, `4K` (`512`/`0.5K` on the previous model) | `1K` |
+| `--image-size` | Resolution: `1K`, `2K`, `4K` (`gemini-3.1-flash-image` also `512`/`0.5K`; Lite is `1K` only) | `1K` |
 
 **OpenAI-specific flags:**
 
@@ -241,7 +241,10 @@ Both providers support 16:9 by default. To request a different ratio:
 yummycli image generate --provider gemini --prompt "..." --model gemini-nano-banana-2.1
 
 # Pro — higher quality
-yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image-preview
+yummycli image generate --provider gemini --prompt "..." --model gemini-3-pro-image
+
+# Lite — fastest and cheapest (1K only)
+yummycli image generate --provider gemini --prompt "..." --model gemini-3.1-flash-lite-image --aspect-ratio 1:1
 ```
 
 **OpenAI:**
@@ -263,9 +266,10 @@ Unknown OpenAI model names trigger a warning and fall back to `gpt-image-2` auto
 |-------|-----------------|
 | `gemini-nano-banana-2.1` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
 | `gemini-3.1-flash-image` | `1:1` `1:4` `1:8` `2:3` `3:2` `3:4` `4:1` `4:3` `4:5` `5:4` `8:1` `9:16` `16:9` `21:9` |
-| `gemini-3-pro-image-preview` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
+| `gemini-3.1-flash-lite-image` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
+| `gemini-3-pro-image` | `1:1` `2:3` `3:2` `3:4` `4:3` `4:5` `5:4` `9:16` `16:9` `21:9` |
 
-`1:4`, `1:8`, `4:1`, `8:1` are Flash-only.
+`1:4`, `1:8`, `4:1`, `8:1` are supported only by `gemini-nano-banana-2.1` and `gemini-3.1-flash-image`.
 
 **Image size:**
 
@@ -273,9 +277,10 @@ Unknown OpenAI model names trigger a warning and fall back to `gpt-image-2` auto
 |-------|-----------------|
 | `gemini-nano-banana-2.1` | `1K` `2K` `4K` |
 | `gemini-3.1-flash-image` | `512` `0.5K` `1K` `2K` `4K` |
-| `gemini-3-pro-image-preview` | `1K` `2K` `4K` |
+| `gemini-3.1-flash-lite-image` | `1K` |
+| `gemini-3-pro-image` | `1K` `2K` `4K` |
 
-`512` and `0.5K` are supported only by `gemini-3.1-flash-image`.
+`512` and `0.5K` are supported only by `gemini-3.1-flash-image`; `gemini-3.1-flash-lite-image` supports `1K` only.
 
 ### JSON output
 

@@ -79,6 +79,8 @@ All `yummycli` generation commands return JSON on stdout. Read the response and 
 }
 ```
 
+`provider` and `model` name what actually produced the image. If the primary provider failed and the fallback provider was used, they differ from what was requested (stderr also logs `primary provider ... failed (...), retrying with ...`). Tell the user when that happens.
+
 ## Safety Rules
 
 - Only use local image files explicitly provided by the user.
